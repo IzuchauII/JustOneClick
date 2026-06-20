@@ -1,0 +1,184 @@
+﻿<Window x:Class="JustOneClick.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="JustOneClick"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Icon="/resource/Logo_Ico.ico"
+        Background="Transparent"
+        ResizeMode="CanResize"
+        Height="600" Width="1000"
+        MinWidth="600" MinHeight="420">
+
+    <!-- Внешняя неоновая рамка -->
+    <Border CornerRadius="15" Padding="4">
+        <Border.BorderBrush>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="{StaticResource NeonStart}" Offset="0"/>
+                <GradientStop Color="{StaticResource NeonEnd}" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.BorderBrush>
+        <Border.BorderThickness>0.6</Border.BorderThickness>
+
+        <!-- Основной фон окна -->
+        <Grid Background="{StaticResource WindowBackgroundBrush}" ClipToBounds="True">
+            <!-- Внутренний бордер с тенью -->
+            <Border Style="{StaticResource NeonBorderStyle}" Background="{StaticResource InnerPanelBrush}">
+
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" BlurRadius="30" ShadowDepth="0" Opacity="0.45"/>
+                </Border.Effect>
+
+                <Grid>
+                    <!-- Header -->
+                    <Grid Height="48" VerticalAlignment="Top" Margin="8">
+                        <Grid.ColumnDefinitions>
+                            <!-- Логотип -->
+                            <ColumnDefinition Width="Auto"/>
+                            <!-- Кнопка папки -->
+                            <ColumnDefinition Width="Auto"/>
+                            <!-- Список выпадающий -->
+                            <ColumnDefinition Width="200"/>
+                            <!-- Перетаскивание -->
+                            <ColumnDefinition Width="*"/>
+                            <!-- Кнопки -->
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Логотип и название -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" Margin="8,0">
+                            <Image Source="{StaticResource AppLogo}" Width="28" Height="28"/>
+                            <TextBlock Text=" JustOneClick" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="1,0"/>
+                        </StackPanel>
+
+                        <!-- Кнопка выбора папки -->
+                        <Button Grid.Column="1" Width="28" Height="28" Margin="8,0,4,0"
+                            ToolTip="Выбрать папку с моделями"
+                            Click="BtnSelectFolder_Click"
+                            Style="{StaticResource TitleBarButtonStyle}">
+                            <TextBlock Text="📁" FontSize="14" VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                                <TextBlock.Foreground>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FFCC8C8C"/>
+                                        <GradientStop Color="#FFD41B1B" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                        </Button>
+
+                        <!-- Выпадающий список моделей -->
+                        <ComboBox x:Name="ModelComboBox"
+                      Grid.Column="2"
+                      VerticalAlignment="Center"
+                      ItemsSource="{Binding ModelFiles}"
+                      SelectedItem="{Binding SelectedModel}"
+                      DisplayMemberPath="DisplayName"
+                      ToolTip="{Binding SelectedModel.FullPath}"
+                      Foreground="Black"
+                      BorderThickness="1"
+                      Height="29"
+                      SelectionChanged="ModelComboBox_SelectionChanged" Background="#00000000">
+                            <ComboBox.BorderBrush>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="{StaticResource NeonStart}" Offset="0"/>
+                                    <GradientStop Color="{StaticResource NeonEnd}" Offset="1"/>
+                                </LinearGradientBrush>
+                            </ComboBox.BorderBrush>
+                        </ComboBox>
+
+                        <!-- Пустая область для перетаскивания -->
+                        <Border Grid.Column="3" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown"/>
+
+                        <!-- Кнопки -->
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,1,0">
+                            <Button x:Name="BtnMin" Click="BtnMin_Click" Width="24" Height="24" Margin="4,0" ToolTip="Свернуть" Style="{StaticResource TitleBarButtonStyle}">
+                                <Path Data="M0,11 L12,5" Stroke="White" StrokeThickness="2" Stretch="Uniform"/>
+                            </Button>
+
+                            <Button x:Name="BtnMax" Click="BtnMax_Click" Width="24" Height="24" Margin="4,0" ToolTip="Развернуть" Style="{StaticResource TitleBarButtonStyle}">
+                                <Path Data="M1,3 L11,1 L11,11 L1,11 Z" Stroke="White" StrokeThickness="1.5" Stretch="Uniform"/>
+                            </Button>
+
+                            <Button x:Name="BtnClose" Click="BtnClose_Click" Width="24" Height="24" Margin="4,0" ToolTip="Закрыть" Style="{StaticResource CloseButtonStyle}">
+                                <Path Data="M1,1 L11,11 M11,1 L1,11" Stroke="Red" StrokeThickness="2.8" Stretch="Uniform"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Основная область (чат) -->
+                    <!-- Основная область (чат) -->
+                    <Grid Margin="1,50,1,84">
+                        <!-- Скролл для сообщений -->
+                        <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <!-- ItemsControl привязан к коллекции Messages в DataContext -->
+                            <ItemsControl ItemsSource="{Binding Messages}">
+                                <!-- Панель элементов: вертикальный стек (виртуализация можно добавить позже) -->
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+
+                                <!-- Шаблон для каждого сообщения -->
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Пузырь сообщения -->
+                                            <Border Padding="10"
+                                CornerRadius="12"
+                                Background="{Binding IsUser, Converter={StaticResource BubbleColorConverter}}"
+                                HorizontalAlignment="{Binding IsUser, Converter={StaticResource BubbleAlignConverter}}"
+                                MaxWidth="640">
+                                                <TextBlock Text="{Binding Text}"
+                                       Foreground="White"
+                                       TextWrapping="Wrap"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+
+
+                    <!-- Нижняя панель ввода -->
+                    <Grid Height="64" VerticalAlignment="Bottom" Margin="2" >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Style="{StaticResource NeonBorderStyle}" Background="#22111111" Padding="8">
+
+                            <TextBox x:Name="InputBox" Background="Transparent" BorderThickness="2" Foreground="White" PreviewKeyDown="InputBox_PreviewKeyDown" AcceptsReturn="True" TextWrapping="WrapWithOverflow"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <Button Width="44" Height="44" Margin="4" ToolTip="Отправить" Click="Send_Click">➤</Button>
+                            <Button Width="44" Height="44" Margin="4" ToolTip="Прикрепить">📎</Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Панель уведомлений (правый верхний угол) -->
+                    <StackPanel x:Name="NotificationsPanel" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,64,12,0" Width="320"/>
+
+                    <!-- Зоны ресайза (прозрачные) -->
+                    <Rectangle x:Name="ResizeLeft" Width="6" HorizontalAlignment="Left" Cursor="SizeWE" MouseDown="ResizeLeft_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeRight" Width="6" HorizontalAlignment="Right" Cursor="SizeWE" MouseDown="ResizeRight_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeTop" Height="6" VerticalAlignment="Top" Cursor="SizeNS" MouseDown="ResizeTop_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeBottom" Height="6" VerticalAlignment="Bottom" Cursor="SizeNS" MouseDown="ResizeBottom_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeTopLeft" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE" MouseDown="ResizeTopLeft_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeTopRight" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW" MouseDown="ResizeTopRight_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeBottomLeft" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW" MouseDown="ResizeBottomLeft_MouseDown" Fill="Transparent"/>
+                    <Rectangle x:Name="ResizeBottomRight" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" MouseDown="ResizeBottomRight_MouseDown" Fill="Transparent"/>
+
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
