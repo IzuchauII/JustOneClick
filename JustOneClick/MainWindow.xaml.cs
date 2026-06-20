@@ -186,7 +186,7 @@ namespace JustOneClick
             ScrollToBottom();
 
             // Небольшая задержка, имитирующая "печать" бота
-            await Task.Delay(450);
+            // await Task.Delay(450);
 
             // Имитация ответа бота
             Messages.Add(new Message
@@ -334,8 +334,10 @@ namespace JustOneClick
         {
             public string? Text { get; set; }
             public bool IsUser { get; set; } // true = пользователь (право), false = бот (лево)
+            public DateTime Time { get; set; } = DateTime.Now;
         }
 
         #endregion
+
     }
 }

@@ -82,7 +82,8 @@
                       DisplayMemberPath="DisplayName"
                       ToolTip="{Binding SelectedModel.FullPath}"
                       Foreground="Black"
-                      BorderThickness="1"
+                      BorderThickness="0.4"
+                      
                       Height="29"
                       SelectionChanged="ModelComboBox_SelectionChanged" Background="#00000000">
                             <ComboBox.BorderBrush>
@@ -136,11 +137,94 @@
 
                                             <!-- Пузырь сообщения -->
                                             <Border Padding="10"
-                                            CornerRadius="12"
-                                            Background="{Binding IsUser, Converter={StaticResource BubbleColorConverter}}"
-                                            HorizontalAlignment="{Binding IsUser, Converter={StaticResource BubbleAlignConverter}}"
-                                            MaxWidth="640">
-                                                <TextBlock Text="{Binding Text}" Foreground="White" TextWrapping="Wrap"/>
+                                                    CornerRadius="{Binding IsUser, Converter={StaticResource BubbleCornerConverter}}"
+                                                    Background="{Binding IsUser, Converter={StaticResource BubbleColorConverter}}"
+                                                    HorizontalAlignment="{Binding IsUser, Converter={StaticResource BubbleAlignConverter}}"
+                                                MaxWidth="640">
+
+                                                
+
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform ScaleX="0.8" ScaleY="0.8"/>
+                                                </Border.RenderTransform>
+
+                                                <Border.Triggers>
+                                                    <EventTrigger RoutedEvent="Loaded">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <!-- Плавное появление -->
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                        From="0" To="1"
+                                                                        Duration="0:0:0.15"/>
+
+                                                                <!-- POP-эффект -->
+                                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                                                                        From="0.8" To="1"
+                                                                        Duration="0:0:0.15"/>
+
+                                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                                                                        From="0.8" To="1"
+                                                                        Duration="0:0:0.15"/>
+
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                </Border.Triggers>
+
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect BlurRadius="15"
+                                                                        ShadowDepth="1"
+                                                                        Color="#00000000"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsUser}" Value="True">
+                                                                <Setter Property="Effect">
+                                                                    <Setter.Value>
+                                                                        <DropShadowEffect BlurRadius="15"
+                                                                                ShadowDepth="1"
+                                                                                Color="MediumTurquoise"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+
+                                                            <DataTrigger Binding="{Binding IsUser}" Value="False">
+                                                                <Setter Property="Effect">
+                                                                    <Setter.Value>
+                                                                        <DropShadowEffect BlurRadius="15"
+                                                                                ShadowDepth="1"
+                                                                                Color="Black"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+
+                                                <!-- ВМЕСТО одного TextBlock — аккуратный Grid -->
+                                                <Grid>
+
+                                                    <!-- Текст сообщения -->
+                                                    <TextBlock Text="{Binding Text}"
+                                                               Foreground="White"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,0,40,0"/>
+
+                                                    <!-- Время в правом нижнем углу -->
+                                                    <TextBlock Text="{Binding Time, StringFormat=HH:mm}"
+                                                               Foreground="#AAFFFFFF"
+                                                               FontSize="9"
+                                                               HorizontalAlignment="Right"
+                                                               VerticalAlignment="Bottom"/>
+                                                    
+
+
+                                                </Grid>
+
                                             </Border>
                                         </Grid>
                                     </DataTemplate>

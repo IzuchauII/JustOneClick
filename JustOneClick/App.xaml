@@ -6,6 +6,8 @@
     <Application.Resources>
         <local:BubbleColorConverter x:Key="BubbleColorConverter"/>
         <local:BubbleAlignConverter x:Key="BubbleAlignConverter"/>
+        <local:BubbleAlignConverter x:Key="BubbleCornerConverter"/>
+
 
         <BitmapImage x:Key="AppLogo" UriSource="pack://application:,,,/Resource/Logo.png"/>
 
