@@ -6,40 +6,40 @@
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize"
-        Width="420" Height="520"
+        Width="420" Height="580"
         WindowStartupLocation="CenterOwner">
 
-    <!-- Внешняя рамка в стиле основного окна -->
     <Border CornerRadius="14" Padding="3"
             Style="{StaticResource NeonAnimatedBorderStyle}">
-        <Border CornerRadius="12"
-                Background="#EE111217">
-
+        <Border CornerRadius="12" Background="#EE111217">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="30" ShadowDepth="0"
-                                  Color="#000000" Opacity="0.1"/>
+                                  Color="#000000" Opacity="0.6"/>
             </Border.Effect>
 
             <Grid Margin="20">
                 <Grid.RowDefinitions>
-                    <!-- Заголовок -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Список режимов -->
+                    <!-- заголовок -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Разделитель -->
+                    <!-- фикс. режимы -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Свой режим -->
+                    <!-- разделитель -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- свой режим + поле -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- кнопка Мои режимы -->
                     <RowDefinition Height="*"/>
-                    <!-- Кнопки -->
+                    <!-- список сохранённых -->
                     <RowDefinition Height="Auto"/>
+                    <!-- кнопки применить/отмена -->
                 </Grid.RowDefinitions>
 
-                <!-- Заголовок + кнопка закрыть -->
+                <!-- ═══ Заголовок ═══ -->
                 <Grid Grid.Row="0" Margin="0,0,0,16">
                     <TextBlock Text="🎭 Режим ИИ"
                                Foreground="White"
-                               FontSize="16"
-                               FontWeight="SemiBold"
+                               FontSize="16" FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                     <Button HorizontalAlignment="Right"
                             Width="24" Height="24"
@@ -51,77 +51,98 @@
                     </Button>
                 </Grid>
 
-                <!-- Список фиксированных режимов -->
+                <!-- ═══ Фиксированные режимы ═══ -->
                 <StackPanel Grid.Row="1" Margin="0,0,0,12">
-
-                    <TextBlock Text="Выбери режим"
+                    <TextBlock Text="Встроенные режимы"
                                Foreground="#88FFFFFF"
-                               FontSize="11"
-                               Margin="0,0,0,8"/>
+                               FontSize="11" Margin="0,0,0,8"/>
 
-                    <!-- Каждый режим — RadioButton в своём стиле -->
                     <RadioButton x:Name="RbAssistant"
                                  Content="🤖  Ассистент"
-                                 Foreground="White"
                                  GroupName="Modes"
                                  Style="{StaticResource ModeRadioStyle}"
-                                 Tag="Ты — универсальный помощник. Отвечай чётко, по делу, структурированно. Используй списки где уместно."
+                                 Tag="Ты — универсальный помощник. Отвечай чётко, по делу, структурированно."
                                  Checked="Mode_Checked"/>
 
                     <RadioButton x:Name="RbHistorian"
                                  Content="📜  Историк"
-                                 Foreground="White"
                                  GroupName="Modes"
                                  Style="{StaticResource ModeRadioStyle}"
-                                 Tag="Ты — историк-эксперт. Отвечай развёрнуто, приводи исторические факты, даты, контекст эпохи. Говори академическим но доступным языком."
+                                 Tag="Ты — историк-эксперт. Приводи факты, даты, контекст эпохи."
                                  Checked="Mode_Checked"/>
 
                     <RadioButton x:Name="RbStoryteller"
                                  Content="📖  Рассказчик"
-                                 Foreground="White"
                                  GroupName="Modes"
                                  Style="{StaticResource ModeRadioStyle}"
-                                 Tag="Ты — талантливый рассказчик. Пиши образно, атмосферно, с деталями. Создавай живые сцены и характеры."
+                                 Tag="Ты — талантливый рассказчик. Пиши образно, атмосферно, с деталями."
                                  Checked="Mode_Checked"/>
 
                     <RadioButton x:Name="RbCustom"
                                  Content="✏️  Свой режим"
-                                 Foreground="White"
                                  GroupName="Modes"
                                  Style="{StaticResource ModeRadioStyle}"
                                  Checked="Mode_Checked"/>
                 </StackPanel>
 
-                <!-- Разделитель -->
+                <!-- ═══ Разделитель ═══ -->
                 <Separator Grid.Row="2" Margin="0,0,0,12"
-                           Background="White"/>
+                           Background="#33FFFFFF"/>
 
-                <!-- Поле своего промпта -->
-                <Grid Grid.Row="3" Margin="0,0,0,16">
+                <!-- ═══ Поле своего промпта ═══ -->
+                <Grid Grid.Row="3" Margin="0,0,0,10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <!-- Кнопка сохранить -->
+                        <RowDefinition Height="110"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0"
-                               Text="Системный промпт своего режима:"
-                               Foreground="#88FFFFFF"
-                               FontSize="11"
-                               Margin="0,0,0,6"/>
+                    <!-- Название режима -->
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Border Grid.Row="1"
-                            CornerRadius="8"
-                            BorderThickness="1"
-                            Padding="8">
+                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                            <TextBlock Text="Название режима:"
+                                       Foreground="#88FFFFFF"
+                                       FontSize="11" Margin="0,0,0,4"/>
+                            <Border CornerRadius="6" BorderThickness="1" Padding="6,4">
+                                <Border.BorderBrush>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#FF00E5FF" Offset="0"/>
+                                        <GradientStop Color="#FF8A00FF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.BorderBrush>
+                                <TextBox x:Name="CustomNameBox"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Foreground="White"
+                                         CaretBrush="White"
+                                         FontSize="12"
+                                         IsEnabled="{Binding ElementName=RbCustom, Path=IsChecked}"
+                                         Opacity="1"/>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Системный промпт:"
+                                       Foreground="#88FFFFFF"
+                                       FontSize="11" Margin="0,0,0,4"/>
+                            <!-- placeholder-текст через стиль -->
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Поле промпта -->
+                    <Border Grid.Row="1" CornerRadius="8"
+                            BorderThickness="1" Padding="8">
                         <Border.BorderBrush>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                 <GradientStop Color="#FF00E5FF" Offset="0"/>
                                 <GradientStop Color="#FF8A00FF" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.BorderBrush>
-
                         <TextBox x:Name="CustomPromptBox"
                                  Background="Transparent"
                                  BorderThickness="0"
@@ -136,16 +157,14 @@
                                  Opacity="1"/>
                     </Border>
 
-                    <!-- Кнопка сохранить свой режим -->
+                    <!-- Кнопка сохранить -->
                     <Button Grid.Row="2"
-                            Content="💾  Сохранить свой режим"
-                            Margin="0,8,0,0"
-                            Height="32"
+                            Content="💾  Сохранить как новый режим"
+                            Margin="0,8,0,0" Height="30"
                             Click="BtnSaveCustom_Click"
                             IsEnabled="{Binding ElementName=RbCustom, Path=IsChecked}"
                             Style="{StaticResource TitleBarButtonStyle}"
-                            Foreground="White"
-                            FontSize="12">
+                            Foreground="White" FontSize="12">
                         <Button.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                 <GradientStop Color="#4400E5FF" Offset="0"/>
@@ -155,25 +174,93 @@
                     </Button>
                 </Grid>
 
-                <!-- Кнопки Применить / Отмена -->
-                <StackPanel Grid.Row="4"
+                <!-- ═══ Кнопка "Мои режимы" (разворачивает список) ═══ -->
+                <Button Grid.Row="4"
+                        x:Name="BtnMyModes"
+                        Content="📂  Мои режимы"
+                        HorizontalAlignment="Left"
+                        Height="30" Margin="0,0,0,8"
+                        Click="BtnMyModes_Click"
+                        Style="{StaticResource TitleBarButtonStyle}"
+                        Foreground="#AAFFFFFF" FontSize="12"/>
+
+                <!-- ═══ Список сохранённых режимов (скрыт по умолчанию) ═══ -->
+                <Border Grid.Row="5"
+                        x:Name="SavedModesPanel"
+                        Visibility="Collapsed"
+                        CornerRadius="8" BorderThickness="1" Padding="4"
+                        Margin="0,0,0,12">
+                    <Border.BorderBrush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#FF00E5FF" Offset="0"/>
+                            <GradientStop Color="#FF8A00FF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.BorderBrush>
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Список названий -->
+                        <ListBox x:Name="SavedModesList"
+                                 Grid.Row="0"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="White"
+                                 FontSize="13"
+                                 SelectionChanged="SavedModesList_SelectionChanged">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#22FFFFFF"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#3300E5FF" Offset="0"/>
+                                                        <GradientStop Color="#338A00FF" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+
+                        <!-- Кнопка удалить выбранный -->
+                        <Button Grid.Row="1"
+                                Content="🗑 Удалить выбранный"
+                                Height="28" Margin="4,4,4,0"
+                                Click="BtnDeleteMode_Click"
+                                Style="{StaticResource TitleBarButtonStyle}"
+                                Foreground="#AAFFFFFF" FontSize="11"/>
+                    </Grid>
+                </Border>
+
+                <!-- ═══ Кнопки Применить / Отмена ═══ -->
+                <StackPanel Grid.Row="6"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right">
-
                     <Button Content="Отмена"
                             Width="90" Height="32"
                             Margin="0,0,8,0"
                             Click="BtnCancel_Click"
                             Style="{StaticResource TitleBarButtonStyle}"
-                            Foreground="#AAFFFFFF"
-                            FontSize="12"/>
+                            Foreground="#AAFFFFFF" FontSize="12"/>
 
                     <Button Content="✔ Применить"
                             Width="110" Height="32"
                             Click="BtnApply_Click"
                             Style="{StaticResource TitleBarButtonStyle}"
-                            Foreground="White"
-                            FontSize="12">
+                            Foreground="White" FontSize="12">
                         <Button.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                 <GradientStop Color="#4400E5FF" Offset="0"/>

@@ -1,17 +1,18 @@
 ﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
-using System;
-using System.IO;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using System.Text.Json;
+using static JustOneClick.MainWindow;
 
 namespace JustOneClick
 {
@@ -35,10 +36,14 @@ namespace JustOneClick
         public string? CurrentPrompt { get; set; }
         public string? CurrentModeName { get; set; }
 
+        // ═══ Список сохранённых режимов в памяти ═══
+        private List<SavedMode> _savedModes = new();
+
         public ModeWindow()
         {
             InitializeComponent();
-            LoadCustomPrompt();
+            LoadAllModes();
+            RefreshModesList();   // заполняем ListBox
             RestoreSelection();
         }
 
@@ -50,24 +55,75 @@ namespace JustOneClick
                 case "Историк": RbHistorian.IsChecked = true; break;
                 case "Рассказчик": RbStoryteller.IsChecked = true; break;
                 case "Свой режим": RbCustom.IsChecked = true; break;
-                default: RbAssistant.IsChecked = true; break;
+                // Если имя совпадает с одним из сохранённых — выбираем "Свой режим"
+                default:
+                    if (_savedModes.Any(m => m.Name == CurrentModeName))
+                    {
+                        RbCustom.IsChecked = true;
+                        var mode = _savedModes.First(m => m.Name == CurrentModeName);
+                        CustomNameBox.Text = mode.Name;
+                        CustomPromptBox.Text = mode.Prompt;
+                    }
+                    else
+                    {
+                        RbAssistant.IsChecked = true;
+                    }
+                    break;
             }
         }
 
-        private void LoadCustomPrompt()
+        private void LoadAllModes()
         {
             try
             {
                 if (!File.Exists(SavePath)) return;
 
                 var json = File.ReadAllText(SavePath);
-                using var doc = JsonDocument.Parse(json);
 
-                if (doc.RootElement.TryGetProperty("customPrompt", out var el))
-                    CustomPromptBox.Text = el.GetString() ?? "";
+                // Добавляем PropertyNameCaseInsensitive = true
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var data = JsonSerializer.Deserialize<ModesFile>(json, options);
+                _savedModes = data?.Modes ?? new List<SavedMode>();
             }
-            catch { /* файл повреждён — игнорируем */ }
+            catch { _savedModes = new List<SavedMode>(); }
         }
+
+        private void SaveAllModes()
+        {
+            try
+            {
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SavePath)!);
+                var data = new ModesFile { Modes = _savedModes };
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    // Сохраняем с маленькой буквы — camelCase
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+                var json = JsonSerializer.Serialize(data, options);
+                File.WriteAllText(SavePath, json);
+            }
+            catch (Exception ex)
+            {
+                ShowError("Ошибка сохранения: " + ex.Message);
+            }
+        }
+
+        private void RefreshModesList()
+        {
+            SavedModesList.Items.Clear();
+            foreach (var mode in _savedModes)
+                SavedModesList.Items.Add(mode.Name);
+        }
+
+        private void ShowError(string msg) => MessageBox.Show(msg, "JustOneClick", MessageBoxButton.OK, MessageBoxImage.Warning);
+    
+                    
+
 
         #endregion
 
@@ -84,6 +140,7 @@ namespace JustOneClick
             {
                 // Tag содержит промпт фиксированного режима
                 CustomPromptBox.Text = rb.Tag?.ToString() ?? "";
+                CustomNameBox.Text = "";
             }
             // Для своего режима — не трогаем, там уже загруженный текст
 
@@ -93,25 +150,37 @@ namespace JustOneClick
 
         private void BtnSaveCustom_Click(object sender, RoutedEventArgs e)
         {
-            try
+            var name = CustomNameBox.Text.Trim();
+            var prompt = CustomPromptBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(name))
             {
-                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SavePath)!);
-
-                var data = new { customPrompt = CustomPromptBox.Text };
-                var json = JsonSerializer.Serialize(data,
-                    new JsonSerializerOptions { WriteIndented = true });
-
-                File.WriteAllText(SavePath, json);
-
-                // Уведомление через Owner (MainWindow)
-                if (Owner is MainWindow mw)
-                    mw.ShowNotification("💾 Свой режим сохранён");
+                ShowError("Введи название режима");
+                return;
             }
-            catch (Exception ex)
+            if (string.IsNullOrEmpty(prompt))
             {
-                MessageBox.Show("Ошибка сохранения: " + ex.Message);
+                ShowError("Введи текст промпта");
+                return;
             }
-         
+
+            // Если имя уже есть — обновляем, иначе добавляем
+            var existing = _savedModes.FirstOrDefault(m => m.Name == name);
+            if (existing != null)
+            {
+                existing.Prompt = prompt; // обновляем промпт
+            }
+            else
+            {
+                _savedModes.Add(new SavedMode { Name = name, Prompt = prompt });
+            }
+
+            SaveAllModes();
+            RefreshModesList();
+
+            if (Owner is MainWindow mw)
+                mw.ShowNotification($"💾 Режим «{name}» сохранён");
+
         }
 
         private void BtnApply_Click(object sender, RoutedEventArgs e)
@@ -133,15 +202,79 @@ namespace JustOneClick
             }
             else if (RbCustom.IsChecked == true)
             {
-                ResultModeName = "Свой режим";
+                var name = CustomNameBox.Text.Trim();
+                ResultModeName = string.IsNullOrEmpty(name) ? "Свой режим" : name;
                 ResultPrompt = CustomPromptBox.Text;
             }
 
             DialogResult = true; // сигнал что нажали Применить
             Close();
         }
+        
+
+        private void BtnMyModes_Click(object sender, RoutedEventArgs e)
+        {
+            bool isVisible = SavedModesPanel.Visibility == Visibility.Visible;
+
+            SavedModesPanel.Visibility = isVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            BtnMyModes.Content = isVisible
+                ? "📂  Мои режимы"
+                : "📂  Мои режимы ▲";
+
+            // Подгоняем высоту окна
+            Height = isVisible ? 580 : 720;
+        }
+
+        private void SavedModesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (SavedModesList.SelectedItem is not string selectedName) return;
+
+            var mode = _savedModes.FirstOrDefault(m => m.Name == selectedName);
+            if (mode == null) return;
+
+            // Переключаемся на "Свой режим" и заполняем поля
+            RbCustom.IsChecked = true;
+            CustomNameBox.Text = mode.Name;
+            CustomPromptBox.Text = mode.Prompt;
+        }
+
+        private void BtnDeleteMode_Click(object sender, RoutedEventArgs e)
+        {
+            if (SavedModesList.SelectedItem is not string selectedName) return;
+
+            _savedModes.RemoveAll(m => m.Name == selectedName);
+            SaveAllModes();
+            RefreshModesList();
+
+            // Сбрасываем поля если удалили активный
+            if (CustomNameBox.Text == selectedName)
+            {
+                CustomNameBox.Text = "";
+                CustomPromptBox.Text = "";
+                RbAssistant.IsChecked = true;
+            }
+        }
+
         #endregion
-    
+
+        #region Область класссов встроенных в ModeWindow
+
+        public class SavedMode
+        {
+            public string Name { get; set; } = "";
+            public string Prompt { get; set; } = "";
+        }
+
+        public class ModesFile
+        {
+            public List<SavedMode> Modes { get; set; } = new();
+        }
+
+        #endregion
+
     }
 
 }
