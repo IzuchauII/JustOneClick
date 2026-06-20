@@ -16,15 +16,21 @@
         Height="600" Width="1000"
         MinWidth="600" MinHeight="420">
 
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.Copy"
+                        Executed="CopyMessage_Executed"/>
+    </Window.CommandBindings>
+
     <!-- Внешняя неоновая рамка -->
-    <Border CornerRadius="15" Padding="4">
-        <Border.BorderBrush>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="{StaticResource NeonStart}" Offset="0"/>
-                <GradientStop Color="{StaticResource NeonEnd}" Offset="1"/>
-            </LinearGradientBrush>
-        </Border.BorderBrush>
-        <Border.BorderThickness>0.6</Border.BorderThickness>
+    <!-- Стало — убираем ручной BorderBrush, применяем стиль -->
+    <Border Padding="4"
+            Style="{StaticResource NeonAnimatedBorderStyle}">
+
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="18"
+                              ShadowDepth="0"
+                              Opacity="0.7"/>
+        </Border.Effect>
 
         <!-- Основной фон окна -->
         <Grid Background="{StaticResource WindowBackgroundBrush}" ClipToBounds="True">
@@ -117,13 +123,17 @@
                     <!-- Основная область (чат) -->
                     <Grid Margin="1,84,1,84">
                         <!-- Скролл для сообщений -->
-                        <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                             <!-- ItemsControl привязан к коллекции Messages в DataContext -->
-                            <ItemsControl ItemsSource="{Binding Messages}">
+                            <ItemsControl ItemsSource="{Binding Messages}"
+                                          VirtualizingPanel.IsVirtualizing="True"
+                                          VirtualizingPanel.VirtualizationMode="Recycling"
+                                          ScrollViewer.CanContentScroll="True"
+                                          >
                                 <!-- Панель элементов: вертикальный стек (виртуализация можно добавить позже) -->
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <StackPanel />
+                                        <VirtualizingStackPanel/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
 
@@ -142,7 +152,15 @@
                                                     HorizontalAlignment="{Binding IsUser, Converter={StaticResource BubbleAlignConverter}}"
                                                 MaxWidth="640">
 
-                                                
+                                                <!-- Добавляем контекстное меню -->
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="📋 Копировать"
+                                                                  Command="ApplicationCommands.Copy"
+                                                                  CommandParameter="{Binding Text}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+
 
                                                 <Border.RenderTransform>
                                                     <ScaleTransform ScaleX="0.8" ScaleY="0.8"/>
@@ -235,17 +253,38 @@
 
 
                     <!-- Нижняя панель ввода -->
-                    <Grid Height="64" VerticalAlignment="Bottom" Margin="2" >
+                    <Grid Height="64" VerticalAlignment="Bottom" Margin="3" >
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Background="#22111111" Padding="0.5">
-                            <TextBox x:Name="InputBox" Background="Transparent" BorderThickness="2" Foreground="White" PreviewKeyDown="InputBox_PreviewKeyDown" AcceptsReturn="True" TextWrapping="WrapWithOverflow"/>
+                        <Border Background="Transparent"
+                                CornerRadius="14"
+                                Padding="8.5"
+                                BorderThickness="2"
+                                BorderBrush="LightBlue">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="10"
+                                                  ShadowDepth="0"
+                                                  Color="LightBlue"/>
+                            </Border.Effect>
+
+                            <TextBox x:Name="InputBox" 
+                                     Background="Transparent" 
+                                     BorderThickness="0" 
+                                     Foreground="White" 
+                                     PreviewKeyDown="InputBox_PreviewKeyDown" 
+                                     AcceptsReturn="True"
+                                     Padding="0"
+                                     TextWrapping="WrapWithOverflow"/>
                         </Border>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <!-- Режим ИИ — НОВАЯ КНОПКА -->
+                            <Button Width="44" Height="44" Margin="4" ToolTip="{Binding CurrentModeName}" Click="BtnMode_Click">
+                                <TextBlock Text="🎭" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
                             <Button Width="44" Height="44" Margin="4" ToolTip="Отправить" Click="Send_Click">➤</Button>
                             <Button Width="44" Height="44" Margin="4" ToolTip="Прикрепить">📎</Button>
                         </StackPanel>

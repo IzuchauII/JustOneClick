@@ -15,7 +15,8 @@ namespace JustOneClick
             bool isUser = (bool)value;
 
             return isUser
-                ? new CornerRadius(1): new CornerRadius(12);
+                ? new CornerRadius(14, 2, 14, 14)   // пользователь — хвостик справа
+                : new CornerRadius(2, 14, 14, 14);  // бот — хвостик слева
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

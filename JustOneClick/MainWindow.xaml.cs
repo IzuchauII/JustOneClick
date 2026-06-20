@@ -30,6 +30,16 @@ namespace JustOneClick
 
         // Выбранная сейчас модель
         private ModelFile? _selectedModel;
+        public string CurrentSystemPrompt { get; private set; } = "Ты — универсальный помощник. Отвечай чётко, по делу.";
+
+        // Название режима (для тултипа кнопки)
+        private string _currentModeName = "Ассистент";
+        public string CurrentModeName
+        {
+            get => _currentModeName;
+            set { _currentModeName = value; OnPropertyChanged(nameof(CurrentModeName)); }
+        }
+
         public ModelFile? SelectedModel
         {
             get => _selectedModel;
@@ -339,5 +349,31 @@ namespace JustOneClick
 
         #endregion
 
+        private void CopyMessage_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+
+            if (e.Parameter is string text)
+                Clipboard.SetText(text);
+
+        }
+
+        private void BtnMode_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new ModeWindow
+            {
+                Owner = this,
+                CurrentPrompt = CurrentSystemPrompt,
+                CurrentModeName = CurrentModeName
+            };
+
+            // ShowDialog — блокирует MainWindow пока открыто ModeWindow
+            if (win.ShowDialog() == true)
+            {
+                CurrentSystemPrompt = win.ResultPrompt ?? CurrentSystemPrompt;
+                CurrentModeName = win.ResultModeName ?? CurrentModeName;
+
+                ShowNotification($"🎭 Режим: {CurrentModeName}", 3);
+            }
+        }
     }
 }
