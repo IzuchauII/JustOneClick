@@ -3,6 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="JustOneClick"
         WindowStyle="None"
+        FontFamily="Roboto"
+        FontSize="14"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
         AllowsTransparency="True"
         Icon="/resource/Logo_Ico.ico"
         Background="Transparent"
@@ -23,7 +29,7 @@
         <!-- Основной фон окна -->
         <Grid Background="{StaticResource WindowBackgroundBrush}" ClipToBounds="True">
             <!-- Внутренний бордер с тенью -->
-            <Border Style="{StaticResource NeonBorderStyle}" Background="{StaticResource InnerPanelBrush}">
+            <Border Background="{StaticResource InnerPanelBrush}">
 
                 <Border.Effect>
                     <DropShadowEffect Color="#000000" BlurRadius="30" ShadowDepth="0" Opacity="0.45"/>
@@ -38,7 +44,7 @@
                             <!-- Кнопка папки -->
                             <ColumnDefinition Width="Auto"/>
                             <!-- Список выпадающий -->
-                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="500"/>
                             <!-- Перетаскивание -->
                             <ColumnDefinition Width="*"/>
                             <!-- Кнопки -->
@@ -108,7 +114,7 @@
 
                     <!-- Основная область (чат) -->
                     <!-- Основная область (чат) -->
-                    <Grid Margin="1,50,1,84">
+                    <Grid Margin="1,84,1,84">
                         <!-- Скролл для сообщений -->
                         <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <!-- ItemsControl привязан к коллекции Messages в DataContext -->
@@ -130,13 +136,11 @@
 
                                             <!-- Пузырь сообщения -->
                                             <Border Padding="10"
-                                CornerRadius="12"
-                                Background="{Binding IsUser, Converter={StaticResource BubbleColorConverter}}"
-                                HorizontalAlignment="{Binding IsUser, Converter={StaticResource BubbleAlignConverter}}"
-                                MaxWidth="640">
-                                                <TextBlock Text="{Binding Text}"
-                                       Foreground="White"
-                                       TextWrapping="Wrap"/>
+                                            CornerRadius="12"
+                                            Background="{Binding IsUser, Converter={StaticResource BubbleColorConverter}}"
+                                            HorizontalAlignment="{Binding IsUser, Converter={StaticResource BubbleAlignConverter}}"
+                                            MaxWidth="640">
+                                                <TextBlock Text="{Binding Text}" Foreground="White" TextWrapping="Wrap"/>
                                             </Border>
                                         </Grid>
                                     </DataTemplate>
@@ -153,8 +157,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Style="{StaticResource NeonBorderStyle}" Background="#22111111" Padding="8">
-
+                        <Border Background="#22111111" Padding="0.5">
                             <TextBox x:Name="InputBox" Background="Transparent" BorderThickness="2" Foreground="White" PreviewKeyDown="InputBox_PreviewKeyDown" AcceptsReturn="True" TextWrapping="WrapWithOverflow"/>
                         </Border>
 

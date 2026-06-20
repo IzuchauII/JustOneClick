@@ -1,13 +1,13 @@
 ﻿#region Область using
+using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Linq;
-using System.IO;
-using Microsoft.Win32;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
@@ -243,6 +243,10 @@ namespace JustOneClick
                     // Берём папку от выбранного файла
                     _modelsFolder = Path.GetDirectoryName(dialog.FileName) ?? "";
                     ScanModelsFolder(_modelsFolder);
+
+                    ModelComboBox.ItemsSource = ModelFiles.Where(m => !Path.GetFileName(m.FullPath).Contains("mmproj", StringComparison.OrdinalIgnoreCase)).ToList();
+
+
                 }
             }
         }
@@ -255,6 +259,7 @@ namespace JustOneClick
         // Сканирование папки — ищем все .gguf файлы
         private void ScanModelsFolder(string folderPath)
         {
+            if (folderPath == null) throw new ArgumentNullException(nameof(folderPath));
             ModelFiles.Clear();
 
             if (!Directory.Exists(folderPath))
@@ -264,6 +269,7 @@ namespace JustOneClick
             }
 
             // Ищем все .gguf файлы в папке (не рекурсивно)
+            // тут можно поменять SearchOption чтобы искать не только в текущей папке, а и в подпапках
             var ggufFiles = Directory.GetFiles(folderPath, "*.gguf",
                                                SearchOption.TopDirectoryOnly);
 
@@ -277,38 +283,13 @@ namespace JustOneClick
             {
                 var model = new ModelFile { FullPath = ggufPath };
 
-                // Ищем mmproj рядом с моделью
-                // Стратегия 1: имя_модели-mmproj.gguf
-                var baseName = Path.GetFileNameWithoutExtension(ggufPath);
                 var folder = Path.GetDirectoryName(ggufPath) ?? "";
 
-                var mmprojGuesses = new[]
-                {
-            Path.Combine(folder, baseName + "-mmproj.gguf"),
-            Path.Combine(folder, baseName + "_mmproj.gguf"),
-            // Стратегия 2: любой файл с "mmproj" в имени
-            // (найдём ниже отдельно)
-        };
+                // Ищем любой файл, содержащий "mmproj" в имени
+                var mmproj = Directory.GetFiles(folder, "*mmproj*.gguf", SearchOption.TopDirectoryOnly).FirstOrDefault();
 
-                foreach (var guess in mmprojGuesses)
-                {
-                    if (File.Exists(guess))
-                    {
-                        model.MmprojPath = guess;
-                        break;
-                    }
-                }
-
-                // Стратегия 3: если не нашли — ищем любой *mmproj*.gguf в папке
-                if (model.MmprojPath == null)
-                {
-                    var anyMmproj = Directory.GetFiles(folder, "*mmproj*.gguf")
-                                             .FirstOrDefault();
-                    // Не назначаем автоматически чужой mmproj —
-                    // только если он один в папке и модель одна
-                    if (anyMmproj != null && ggufFiles.Length == 1)
-                        model.MmprojPath = anyMmproj;
-                }
+                if (mmproj != null)
+                    model.MmprojPath = mmproj;
 
                 ModelFiles.Add(model);
             }
@@ -327,7 +308,7 @@ namespace JustOneClick
             if (SelectedModel.MmprojPath != null)
                 msg += $"\nMMProj: {Path.GetFileName(SelectedModel.MmprojPath)}";
             else
-                msg += "\nMMProj: не найден (только текст)";
+                msg += "\nMMProj: не найден (только текст), возможно в данной папке отсутствует подходящий мультимодальный модуль";
 
             ShowNotification(msg, 5);
         }
@@ -344,7 +325,7 @@ namespace JustOneClick
             // То что показывается в ComboBox
             public string DisplayName =>
                 System.IO.Path.GetFileNameWithoutExtension(FullPath)
-                + (MmprojPath != null ? " 👁" : "");
+                + (MmprojPath != null ? "👁" : "");
             // значок глаза если есть mmproj — визуальная подсказка
         }
 

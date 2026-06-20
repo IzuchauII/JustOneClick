@@ -2,13 +2,13 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:JustOneClick"
-             
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <local:BubbleColorConverter x:Key="BubbleColorConverter"/>
         <local:BubbleAlignConverter x:Key="BubbleAlignConverter"/>
 
         <BitmapImage x:Key="AppLogo" UriSource="pack://application:,,,/Resource/Logo.png"/>
+
 
         <Color x:Key="NeonStart">#FF00E5FF</Color>
         <Color x:Key="NeonEnd">#FF8A00FF</Color>
@@ -52,6 +52,9 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+
+
 
         <!-- Стиль для кнопки закрытия (красная при hover) -->
         <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource TitleBarButtonStyle}">
