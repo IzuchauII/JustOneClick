@@ -181,6 +181,37 @@
                             </Grid>
                         </Border>
 
+                        <Border x:Name="LoadingBar"
+                                        VerticalAlignment="Top"
+                                        Margin="8,56,8,0"
+                                        Visibility="Collapsed"
+                                        CornerRadius="4"
+                                        Height="6">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#FF00E5FF" Offset="0"/>
+                                    <GradientStop Color="#FF8A00FF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <ProgressBar x:Name="ModelLoadProgress"
+                                         Minimum="0" Maximum="100"
+                                         Value="0"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Foreground="Transparent"
+                                         Height="6"/>
+                        </Border>
+
+                        <!-- Текст статуса загрузки -->
+                        <TextBlock x:Name="LoadingStatusText"
+                                   VerticalAlignment="Top"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,64,0,0"
+                                   Foreground="#88FFFFFF"
+                                   FontSize="11"
+                                   Visibility="Collapsed"/>
+
                         <!-- Скролл для сообщений -->
                         <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                             <!-- ItemsControl привязан к коллекции Messages в DataContext -->
