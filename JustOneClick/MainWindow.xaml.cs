@@ -1,6 +1,7 @@
 ﻿#region Область using
 using LLama;
 using LLama.Common;
+using LLama.Sampling;
 using Microsoft.Extensions.AI;
 using Microsoft.Win32;
 using System;
@@ -16,6 +17,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using static LLama.LLamaTransforms;
 using static System.Net.WebRequestMethods;
 #endregion
 namespace JustOneClick
@@ -24,9 +26,7 @@ namespace JustOneClick
     {
         #region Свойства и поля
         // Список сообщений чата — привязан к ItemsControl в XAML
-        // Список сообщений чата — привязан к ItemsControl в XAML
-        public ObservableCollection<ChatMessage> Messages { get; }
-            = new ObservableCollection<ChatMessage>();
+        public ObservableCollection<ChatMessage> Messages { get; } = [];
 
         // INotifyPropertyChanged — уведомляем UI об изменении свойств
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -34,8 +34,8 @@ namespace JustOneClick
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         // Список найденных GGUF файлов — привязан к ComboBox
-        public ObservableCollection<GgufModel> ModelFiles { get; }
-            = new ObservableCollection<GgufModel>();
+        public ObservableCollection<GgufModel> ModelFiles { get; } = [];
+            
 
         // Выбранная модель в ComboBox
         private GgufModel? _selectedModel;
@@ -55,7 +55,7 @@ namespace JustOneClick
 
         // Системный промпт текущего режима
         public string ActiveSystemPrompt { get; private set; }
-            = "Ты — универсальный помощник. Отвечай чётко, по делу.";
+            = "Ты — универсальный помощник. Отвечай чётко, по делу. /NO THINK";
 
         // Путь к папке с моделями
         private string _modelsFolder = "";
@@ -73,7 +73,7 @@ namespace JustOneClick
         private CancellationTokenSource? _generationCts;
 
         // Результаты поиска по чату
-        private List<int> _foundIndices = new();  // индексы сообщений
+        private List<int> _foundIndices = [];  // индексы сообщений
         private int _foundCurrent = -1;     // текущий выбранный
 
         #endregion
@@ -88,14 +88,14 @@ namespace JustOneClick
         private static extern bool ReleaseCapture();
 
         private const int WM_NCLBUTTONDOWN = 0x00A1;
-        private readonly IntPtr HT_LEFT = new IntPtr(10);
-        private readonly IntPtr HT_RIGHT = new IntPtr(11);
-        private readonly IntPtr HT_TOP = new IntPtr(12);
-        private readonly IntPtr HT_BOTTOM = new IntPtr(15);
-        private readonly IntPtr HT_TOPLEFT = new IntPtr(13);
-        private readonly IntPtr HT_TOPRIGHT = new IntPtr(14);
-        private readonly IntPtr HT_BOTTOMLEFT = new IntPtr(16);
-        private readonly IntPtr HT_BOTTOMRIGHT = new IntPtr(17);
+        private readonly IntPtr HT_LEFT = 10;
+        private readonly IntPtr HT_RIGHT = 11;
+        private readonly IntPtr HT_TOP = 12;
+        private readonly IntPtr HT_BOTTOM = 15;
+        private readonly IntPtr HT_TOPLEFT = 13;
+        private readonly IntPtr HT_TOPRIGHT = 14;
+        private readonly IntPtr HT_BOTTOMLEFT = 16;
+        private readonly IntPtr HT_BOTTOMRIGHT = 17;
 
         #endregion
 
@@ -154,41 +154,6 @@ namespace JustOneClick
 
         }
 
-        #region Область объявление класов и переменных 
-
-        public class ModelFile
-        {
-            // Полный путь к .gguf файлу
-            public string FullPath { get; set; } = "";
-
-            // Полный путь к mmproj файлу (null если не найден)
-            public string? MmprojPath { get; set; }
-
-            // То что показывается в ComboBox
-            public string DisplayName =>
-                System.IO.Path.GetFileNameWithoutExtension(FullPath)
-                + (MmprojPath != null ? "👁" : "");
-            // значок глаза если есть mmproj — визуальная подсказка
-        }
-
-        private TextBox? GetInputBox()
-        {
-            return InputBox;
-        }
-        // Класс сообщения вынесен наружу (в том же namespace)
-        public class Message
-        {
-            public string? Text { get; set; }
-            public bool IsUser { get; set; } // true = пользователь (право), false = бот (лево)
-            public DateTime Time { get; set; } = DateTime.Now;
-        }
-
-        private List<int> _searchResults = new();  // индексы найденных сообщений
-
-        private int _searchIndex = -1;             // текущий результат
-
-        #endregion
-
         #region Область обработчики кнопок и событий
 
         // Обработчики зон ресайза
@@ -215,7 +180,7 @@ namespace JustOneClick
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ButtonState == MouseButtonState.Pressed)
-                DragMove(); // встроенный метод WPF
+                DragMove(); 
         }
 
         private void CopyMessage_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -272,6 +237,7 @@ namespace JustOneClick
             var dialog = new OpenFileDialog
             {
                 Title = "Выбери любой GGUF файл в папке с моделями",
+                
                 Filter = "GGUF модели|*.gguf",
                 CheckFileExists = true
             };
@@ -281,11 +247,20 @@ namespace JustOneClick
             _modelsFolder = Path.GetDirectoryName(dialog.FileName) ?? "";
             ScanForModels(_modelsFolder);
 
-            // Скрываем mmproj файлы из ComboBox — они вспомогательные
-            ModelComboBox.ItemsSource = ModelFiles
+            // 1. Фильтруем список (убираем mmproj)
+            var visibleModels = ModelFiles
                 .Where(m => !Path.GetFileName(m.FullPath)
                     .Contains("mmproj", StringComparison.OrdinalIgnoreCase))
                 .ToList();
+
+            // 2. Привязываем отфильтрованный список к ComboBox
+            ModelComboBox.ItemsSource = visibleModels;
+
+            // 3. Выбираем первый доступный элемент автоматически
+            if (visibleModels.Any())
+            {
+                SelectedModel = visibleModels.First();
+            }
         }
 
         private async void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -327,16 +302,42 @@ namespace JustOneClick
             ActiveSystemPrompt = modeWin.ResultPrompt ?? ActiveSystemPrompt;
             ActiveModeName = modeWin.ResultModeName ?? ActiveModeName;
 
-            // Сбрасываем сессию — новый промпт применится с первого сообщения
-            if (_chatSession != null && _llamaContext != null)
+            if (_llamaWeights != null)
             {
-                _chatSession = new ChatSession(
-                    new InteractiveExecutor(_llamaContext));
-                ShowNotification($"🎭 {ActiveModeName} — сессия сброшена", 3);
+                // Уничтожаем старый контекст (он содержит всю историю токенов)
+                _chatSession = null;
+                _llamaContext?.Dispose();
+                _llamaContext = null;
+
+                // Создаём свежий контекст из тех же весов — веса не перегружаются!
+                // Это быстро, занимает доли секунды
+                var mp = new ModelParams(SelectedModel!.FullPath)
+                {
+                    ContextSize = 8192,
+                    FlashAttention = true,
+                    GpuLayerCount = 32,
+                    BatchSize = 512,
+                };
+
+                _llamaContext = _llamaWeights.CreateContext(mp);
+
+                // Теперь контекст чистый — AddAndProcessSystemMessage не упадёт
+                var executor = new InteractiveExecutor(_llamaContext);
+                _chatSession = new ChatSession(executor);
+
+                _chatSession.OutputTransform = new LLamaTransforms.KeywordTextOutputStreamTransform(
+                    keywords: new[] { "<think>", "</think>" },
+                    redundancyLength: 8
+                    );
+
+                _chatSession.AddAndProcessSystemMessage(ActiveSystemPrompt);
+
+                _modelReady = true;
+                ShowNotification($"🎭 {ActiveModeName} — системный промпт применён", 3);
             }
             else
             {
-                ShowNotification($"🎭 Режим: {ActiveModeName}", 3);
+                ShowNotification($"🎭 Режим: {ActiveModeName} (модель не загружена)", 3);
             }
         }
 
@@ -344,102 +345,6 @@ namespace JustOneClick
 
 
         #region Область методов программные   
-
-        // Обновить счётчик "2 / 5"
-        private void UpdateSearchCounter()
-        {
-            SearchCounter.Text = $"{_searchIndex + 1} / {_searchResults.Count}";
-        }
-
-        // Сбросить подсветку (задел на будущее)
-        private void ClearSearchHighlights()
-        {
-            // Здесь можно будет убирать цветовую подсветку
-            // когда добавим выделение найденного текста
-        }
-
-        // Прокрутить к найденному сообщению
-        private void ScrollToSearchResult()
-        {
-            if (_searchIndex < 0 || _searchIndex >= _searchResults.Count) return;
-
-            int msgIndex = _searchResults[_searchIndex];
-
-            // Просим ItemsControl показать элемент
-            var container = GetMessageContainer(msgIndex);
-            container?.BringIntoView();
-        }
-
-        // Получить визуальный контейнер сообщения по индексу
-        private FrameworkElement? GetMessageContainer(int index)
-        {
-            // ItemsControl должен сгенерировать контейнер
-            var itemsControl = ChatScroll.Content as ItemsControl;
-            if (itemsControl == null) return null;
-
-            itemsControl.UpdateLayout();
-            return itemsControl.ItemContainerGenerator
-                               .ContainerFromIndex(index) as FrameworkElement;
-        }
-
-        // Сканирование папки — ищем все .gguf файлы
-        private void ScanModelsFolder(string folderPath)
-        {
-            if (folderPath == null) throw new ArgumentNullException(nameof(folderPath));
-            ModelFiles.Clear();
-
-            if (!Directory.Exists(folderPath))
-            {
-                ShowNotification("Папка не найдена: " + folderPath);
-                return;
-            }
-
-            // Ищем все .gguf файлы в папке (не рекурсивно)
-            // тут можно поменять SearchOption чтобы искать не только в текущей папке, а и в подпапках
-            var ggufFiles = Directory.GetFiles(folderPath, "*.gguf",
-                                               SearchOption.TopDirectoryOnly);
-
-            if (ggufFiles.Length == 0)
-            {
-                ShowNotification("GGUF файлы не найдены в папке");
-                return;
-            }
-
-            foreach (var ggufPath in ggufFiles)
-            {
-                var model = new GgufModel { FullPath = ggufPath };
-
-                var folder = Path.GetDirectoryName(ggufPath) ?? "";
-
-                // Ищем любой файл, содержащий "mmproj" в имени
-                var mmproj = Directory.GetFiles(folder, "*mmproj*.gguf", SearchOption.TopDirectoryOnly).FirstOrDefault();
-
-                if (mmproj != null)
-                    model.MmprojPath = mmproj;
-
-                ModelFiles.Add(model);
-            }
-
-            // Выбираем первую модель автоматически
-            SelectedModel = ModelFiles.FirstOrDefault();
-
-            ShowNotification($"Найдено моделей: {ModelFiles.Count}");
-        }
-
-        private void ScrollToBottom()
-        {
-            try
-            {
-                ChatScroll?.ScrollToEnd();
-            }
-            catch
-            {
-                // безопасно игнорируем, если элемент ещё не готов
-            }
-        }
-
-        // Общая логика отправки сообщения и имитации ответа бота
-
 
         public void ShowNotification(string text, int seconds = 4)
         {
@@ -452,14 +357,13 @@ namespace JustOneClick
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(10),
                     Margin = new Thickness(0, 6, 0, 0),
-                    Opacity = 0
-                };
-
-                border.Child = new TextBlock
-                {
-                    Text = text,
-                    Foreground = System.Windows.Media.Brushes.White,
-                    TextWrapping = TextWrapping.Wrap
+                    Opacity = 0,
+                    Child = new TextBlock
+                    {
+                        Text = text,
+                        Foreground = System.Windows.Media.Brushes.White,
+                        TextWrapping = TextWrapping.Wrap
+                    }
                 };
 
                 NotificationsPanel.Children.Insert(0, border);
@@ -512,10 +416,9 @@ namespace JustOneClick
                 {
                     var mp = new ModelParams(modelPath)
                     {
-                        ContextSize = 4096,
-                        GpuLayerCount = 0,     // 0 = CPU. Для GPU поставь 35+
-                        Threads = Math.Max(1, Environment.ProcessorCount - 1),
-                                            
+                        ContextSize = 8192,
+                        FlashAttention = true,
+                        GpuLayerCount = 32,     // 0 = CPU. Для GPU поставь 35+                                            
                         BatchSize = 512,
                     };
 
@@ -529,6 +432,11 @@ namespace JustOneClick
                 // Создаём сессию чата
                 var executor = new InteractiveExecutor(_llamaContext!);
                 _chatSession = new ChatSession(executor);
+                _chatSession.OutputTransform = new LLamaTransforms.KeywordTextOutputStreamTransform(
+                                                keywords: new[] { "<think>", "</think>" },
+                                                redundancyLength: 8
+                                                );
+                await _chatSession.AddAndProcessSystemMessage(ActiveSystemPrompt);
                 _modelReady = true;
 
                 ShowNotification(
@@ -626,28 +534,11 @@ namespace JustOneClick
             {
                 var buffer = new StringBuilder();
 
-                var inferParams = new InferenceParams
-                {
-                    MaxTokens = 1024,
-
-                    // Стоп-токены — модель замолкает при их появлении
-                    AntiPrompts = new[]
-                    {
-                        "<|user|>"
-                    }
-                };
-
-                // Первое сообщение в сессии — добавляем системный промпт
-                bool isFirstMessage = !_chatSession.History.Messages
-                    .Any(m => m.AuthorRole == AuthorRole.User);
-
-                var messageText = isFirstMessage
-                    ? $"{ActiveSystemPrompt}\n\n{userText}"
-                    : userText;
+                var inferParams = BuildInferenceParams();
 
                 // Потоковая генерация — токены приходят один за другим
                 await foreach (var token in _chatSession.ChatAsync(
-                    new ChatHistory.Message(AuthorRole.User, messageText),
+                    new ChatHistory.Message(AuthorRole.User, userText),
                     inferParams,
                     _generationCts.Token))
                 {
@@ -700,10 +591,13 @@ namespace JustOneClick
 
             foreach (var path in ggufPaths)
             {
+                if (Path.GetFileName(path)
+                        .Contains("mmproj", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 var entry = new GgufModel { FullPath = path };
                 var folder = Path.GetDirectoryName(path) ?? "";
 
-                // Ищем mmproj рядом
                 var mmproj = Directory
                     .GetFiles(folder, "*mmproj*.gguf", SearchOption.TopDirectoryOnly)
                     .FirstOrDefault();
@@ -747,8 +641,7 @@ namespace JustOneClick
             if (_foundCurrent < 0 || _foundCurrent >= _foundIndices.Count) return;
 
             int idx = _foundIndices[_foundCurrent];
-            var ic = ChatScroll.Content as ItemsControl;
-            if (ic == null) return;
+            if (ChatScroll.Content is not ItemsControl ic) return;
 
             ic.UpdateLayout();
             var container = ic.ItemContainerGenerator
@@ -776,6 +669,20 @@ namespace JustOneClick
             catch { }
         }
 
+        private InferenceParams BuildInferenceParams() => new InferenceParams
+        {
+            SamplingPipeline = new DefaultSamplingPipeline()
+            {
+                Temperature = 0.7f,
+                TopK = 40,
+                TopP = 0.9f,
+                // Главное от зависания — штраф за повторения
+                RepeatPenalty = 1.15f,
+            },
+            MaxTokens = 1024
+        };
+
+
         private void ToggleMaxRestore()
         {
             WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
@@ -798,10 +705,12 @@ namespace JustOneClick
             BtnAttach.IsEnabled = SelectedModel.MmprojPath != null;
 
             // Уведомление о выбранной модели
-            var info = $"Модель: {SelectedModel.DisplayName}";
+            var info = $"Модель: {Path.GetFileNameWithoutExtension(SelectedModel.FullPath)}";
+
             info += SelectedModel.MmprojPath != null
-                ? $"\nMMProj: {Path.GetFileName(SelectedModel.MmprojPath)}"
-                : "\nТолько текстовый режим";
+                ? "\n🖼 Поддерживается мультимодальный режим"
+                : "\n💬 Только текстовый режим";
+
             ShowNotification(info, 4);
 
             // Загружаем новую
