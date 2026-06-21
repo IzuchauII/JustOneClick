@@ -79,47 +79,62 @@ namespace JustOneClick
             InitializeComponent();
 
             DataContext = this;
-            #region Область разворачивания окна по двойному клику на header
+            
             // Двойной клик по header — разворачиваем/восстанавливаем
             this.MouseDoubleClick += (s, e) =>
             {
                 if (e.ChangedButton == MouseButton.Left)
                     ToggleMaxRestore();
             };
-            #endregion
-        }
 
-        // Перетаскивание окна (нажатие на header)
-        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ButtonState == MouseButtonState.Pressed)
-                DragMove(); // встроенный метод WPF
-        }
-
-        // Кнопки
-        private void BtnMin_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-
-        private void BtnMax_Click(object sender, RoutedEventArgs e) => ToggleMaxRestore();
-
-        private void ToggleMaxRestore()
-        {
-            WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
-        }
-        #region Тоже область с ресайзом 
-        // Начать ресайз через Win32
-        private void BeginResize(IntPtr edge)
-        {
-            try
+            // Ctrl+F открывает поиск
+            this.KeyDown += (s, e) =>
             {
-                ReleaseCapture();
-                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-                SendMessage(hwnd, WM_NCLBUTTONDOWN, edge, IntPtr.Zero);
-            }
-            catch (Exception)
-            {
-                // можно логировать ошибку, если нужно
-            }
+                if (e.Key == Key.F &&
+                    (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+                {
+                    BtnSearch_Click(s, new RoutedEventArgs());
+                }
+            };
+
         }
+
+        #region Область объявление класов и переменных 
+
+        public class ModelFile
+        {
+            // Полный путь к .gguf файлу
+            public string FullPath { get; set; } = "";
+
+            // Полный путь к mmproj файлу (null если не найден)
+            public string? MmprojPath { get; set; }
+
+            // То что показывается в ComboBox
+            public string DisplayName =>
+                System.IO.Path.GetFileNameWithoutExtension(FullPath)
+                + (MmprojPath != null ? "👁" : "");
+            // значок глаза если есть mmproj — визуальная подсказка
+        }
+
+        private TextBox? GetInputBox()
+        {
+            return InputBox;
+        }
+        // Класс сообщения вынесен наружу (в том же namespace)
+        public class Message
+        {
+            public string? Text { get; set; }
+            public bool IsUser { get; set; } // true = пользователь (право), false = бот (лево)
+            public DateTime Time { get; set; } = DateTime.Now;
+        }
+
+        private List<int> _searchResults = new();  // индексы найденных сообщений
+
+        private int _searchIndex = -1;             // текущий результат
+
+        #endregion
+
+        #region Область обработчики кнопок и событий
 
         // Обработчики зон ресайза
         private void ResizeLeft_MouseDown(object sender, MouseButtonEventArgs e) => BeginResize(HTLEFT);
@@ -130,110 +145,101 @@ namespace JustOneClick
         private void ResizeTopRight_MouseDown(object sender, MouseButtonEventArgs e) => BeginResize(HTTOPRIGHT);
         private void ResizeBottomLeft_MouseDown(object sender, MouseButtonEventArgs e) => BeginResize(HTBOTTOMLEFT);
         private void ResizeBottomRight_MouseDown(object sender, MouseButtonEventArgs e) => BeginResize(HTBOTTOMRIGHT);
-        #endregion
-        // Показать уведомление (анимация + автоудаление)
 
-        #region Эффект появления уведомления с автоудалением по таймеру
-        public void ShowNotification(string text, int seconds = 4)
+        private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var border = new Border
-            {
-                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 30, 30, 30)),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(10),
-                Margin = new Thickness(0, 6, 0, 0),
-                Opacity = 0
-            };
+            if (SelectedModel == null) return;
 
-            var tb = new TextBlock { Text = text, Foreground = System.Windows.Media.Brushes.White };
-            border.Child = tb;
-            NotificationsPanel.Children.Insert(0, border);
+            BtnAttach.IsEnabled = SelectedModel.MmprojPath != null;
 
-            // Появление
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250));
-            border.BeginAnimation(OpacityProperty, fadeIn);
+            var msg = $"Модель: {SelectedModel.DisplayName}";
+            if (SelectedModel.MmprojPath != null)
+                msg += $"\nMMProj: {Path.GetFileName(SelectedModel.MmprojPath)}";
+            else
+                msg += "\nТолько текстовый режим \nНе обнаружен мультмодальный блок";
 
-            // Удаление через таймер
-            var timer = new System.Timers.Timer(seconds * 1000);
-            timer.Elapsed += (s, e) =>
-            {
-                timer.Stop();
-                Dispatcher.Invoke(() =>
-                {
-                    var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(300));
-                    fadeOut.Completed += (s2, e2) => NotificationsPanel.Children.Remove(border);
-                    border.BeginAnimation(OpacityProperty, fadeOut);
-                });
-            };
-            timer.Start();
+            ShowNotification(msg, 5);
         }
-        #endregion
-        // Кнопка отправки — теперь переиспользует общий метод
+
+        private void BtnMin_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void BtnMax_Click(object sender, RoutedEventArgs e) => ToggleMaxRestore();
+
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove(); // встроенный метод WPF
+        }
+
+        private void CopyMessage_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+
+            if (e.Parameter is string text)
+                Clipboard.SetText(text);
+
+        }
+
+        private void BtnSearch_Click(object sender, RoutedEventArgs e)
+        {
+            bool isVisible = SearchPanel.Visibility == Visibility.Visible;
+
+            SearchPanel.Visibility = isVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            if (!isVisible)
+            {
+                SearchBox.Focus();
+                SearchBox.SelectAll();
+            }
+            else
+            {
+                // Закрыли — сбрасываем подсветку
+                ClearSearchHighlights();
+                SearchBox.Text = "";
+            }
+        }
+
         private async void Send_Click(object sender, RoutedEventArgs e)
         {
             await SendMessageFromInputAsync(GetInputBox());
         }
 
-        private TextBox? GetInputBox()
-        {
-            return InputBox;
-        }
-
-        // Общая логика отправки сообщения и имитации ответа бота
-        private async Task SendMessageFromInputAsync(TextBox? inputBox)
-        {
-            var text = InputBox?.Text;
-            if (string.IsNullOrWhiteSpace(text)) return;
-
-            // Добавляем сообщение пользователя
-            Messages.Add(new Message
-            {
-                Text = text,
-                IsUser = true
-            });
-            InputBox?.Clear();
-            await Task.Yield(); // даём UI шанс обновиться
-            ScrollToBottom();
-
-            // Небольшая задержка, имитирующая "печать" бота
-            // await Task.Delay(450);
-
-            // Имитация ответа бота
-            Messages.Add(new Message
-            {
-                Text = "Это ответ бота",
-                IsUser = false
-            });
-
-            ScrollToBottom();
-
-            // Вернуть фокус в поле ввода
-            InputBox?.Focus();
-        }
-
-        // Автопрокрутка вниз (без исключений)
-        private void ScrollToBottom()
-        {
-            try
-            {
-                ChatScroll?.ScrollToEnd();
-            }
-            catch
-            {
-                // безопасно игнорируем, если элемент ещё не готов
-            }
-        }
-
         private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
 
-        // Обработчик клавиш в поле ввода: Enter отправляет, Shift+Enter — перенос строки
-        private async void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            var query = SearchBox.Text.Trim();
+            _searchResults.Clear();
+            _searchIndex = -1;
+
+            ClearSearchHighlights();
+
+            if (string.IsNullOrEmpty(query))
             {
-                e.Handled = true; // предотвращаем вставку новой строки
-                await SendMessageFromInputAsync(GetInputBox());
+                SearchCounter.Text = "";
+                return;
             }
+
+            // Ищем по всем сообщениям
+            for (int i = 0; i < Messages.Count; i++)
+            {
+                if (Messages[i].Text?.Contains(query,
+                    StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    _searchResults.Add(i);
+                }
+            }
+
+            if (_searchResults.Count == 0)
+            {
+                SearchCounter.Text = "Не найдено";
+                return;
+            }
+
+            // Переходим к первому результату
+            _searchIndex = 0;
+            UpdateSearchCounter();
+            ScrollToSearchResult();
         }
 
         private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
@@ -261,10 +267,92 @@ namespace JustOneClick
             }
         }
 
+        private async void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            {
+                e.Handled = true; // предотвращаем вставку новой строки
+                await SendMessageFromInputAsync(GetInputBox());
+            }
+        }
+   
+        private void SearchNext_Click(object sender, RoutedEventArgs e)
+        {
+            if (_searchResults.Count == 0) return;
+            _searchIndex = (_searchIndex + 1) % _searchResults.Count;
+            UpdateSearchCounter();
+            ScrollToSearchResult();
+        }
+
+        private void SearchPrev_Click(object sender, RoutedEventArgs e)
+        {
+            if (_searchResults.Count == 0) return;
+            _searchIndex = (_searchIndex - 1 + _searchResults.Count)
+                           % _searchResults.Count;
+            UpdateSearchCounter();
+            ScrollToSearchResult();
+        }
+
+        private void BtnMode_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new ModeWindow
+            {
+                Owner = this,
+                CurrentPrompt = CurrentSystemPrompt,
+                CurrentModeName = CurrentModeName
+            };
+
+            // ShowDialog — блокирует MainWindow пока открыто ModeWindow
+            if (win.ShowDialog() == true)
+            {
+                CurrentSystemPrompt = win.ResultPrompt ?? CurrentSystemPrompt;
+                CurrentModeName = win.ResultModeName ?? CurrentModeName;
+
+                ShowNotification($"🎭 Режим: {CurrentModeName}", 3);
+            }
+        }
+
+        #endregion
 
 
+        #region Область методов программные   
 
-        #region Область назначения классов и структур
+        // Обновить счётчик "2 / 5"
+        private void UpdateSearchCounter()
+        {
+            SearchCounter.Text = $"{_searchIndex + 1} / {_searchResults.Count}";
+        }
+
+        // Сбросить подсветку (задел на будущее)
+        private void ClearSearchHighlights()
+        {
+            // Здесь можно будет убирать цветовую подсветку
+            // когда добавим выделение найденного текста
+        }
+
+        // Прокрутить к найденному сообщению
+        private void ScrollToSearchResult()
+        {
+            if (_searchIndex < 0 || _searchIndex >= _searchResults.Count) return;
+
+            int msgIndex = _searchResults[_searchIndex];
+
+            // Просим ItemsControl показать элемент
+            var container = GetMessageContainer(msgIndex);
+            container?.BringIntoView();
+        }
+
+        // Получить визуальный контейнер сообщения по индексу
+        private FrameworkElement? GetMessageContainer(int index)
+        {
+            // ItemsControl должен сгенерировать контейнер
+            var itemsControl = ChatScroll.Content as ItemsControl;
+            if (itemsControl == null) return null;
+
+            itemsControl.UpdateLayout();
+            return itemsControl.ItemContainerGenerator
+                               .ContainerFromIndex(index) as FrameworkElement;
+        }
 
         // Сканирование папки — ищем все .gguf файлы
         private void ScanModelsFolder(string folderPath)
@@ -310,70 +398,118 @@ namespace JustOneClick
             ShowNotification($"Найдено моделей: {ModelFiles.Count}");
         }
 
-        private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ScrollToBottom()
         {
-            if (SelectedModel == null) return;
-
-            var msg = $"Модель: {SelectedModel.DisplayName}";
-            if (SelectedModel.MmprojPath != null)
-                msg += $"\nMMProj: {Path.GetFileName(SelectedModel.MmprojPath)}";
-            else
-                msg += "\nMMProj: не найден (только текст), возможно в данной папке отсутствует подходящий мультимодальный модуль";
-
-            ShowNotification(msg, 5);
+            try
+            {
+                ChatScroll?.ScrollToEnd();
+            }
+            catch
+            {
+                // безопасно игнорируем, если элемент ещё не готов
+            }
         }
 
-        // Описание одного GGUF файла
-        public class ModelFile
+        // Общая логика отправки сообщения и имитации ответа бота
+        private async Task SendMessageFromInputAsync(TextBox? inputBox)
         {
-            // Полный путь к .gguf файлу
-            public string FullPath { get; set; } = "";
+            var text = InputBox?.Text;
+            if (string.IsNullOrWhiteSpace(text)) return;
 
-            // Полный путь к mmproj файлу (null если не найден)
-            public string? MmprojPath { get; set; }
+            // Добавляем сообщение пользователя
+            Messages.Add(new Message
+            {
+                Text = text,
+                IsUser = true
+            });
+            InputBox?.Clear();
+            await Task.Yield(); // даём UI шанс обновиться
+            ScrollToBottom();
 
-            // То что показывается в ComboBox
-            public string DisplayName =>
-                System.IO.Path.GetFileNameWithoutExtension(FullPath)
-                + (MmprojPath != null ? "👁" : "");
-            // значок глаза если есть mmproj — визуальная подсказка
+            // Небольшая задержка, имитирующая "печать" бота
+            // await Task.Delay(450);
+
+            // Имитация ответа бота
+            Messages.Add(new Message
+            {
+                Text = "Это ответ бота",
+                IsUser = false
+            });
+
+            ScrollToBottom();
+
+            // Вернуть фокус в поле ввода
+            InputBox?.Focus();
         }
 
-        // Класс сообщения вынесен наружу (в том же namespace)
-        public class Message
+        public void ShowNotification(string text, int seconds = 4)
         {
-            public string? Text { get; set; }
-            public bool IsUser { get; set; } // true = пользователь (право), false = бот (лево)
-            public DateTime Time { get; set; } = DateTime.Now;
+            var border = new Border
+            {
+                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 30, 30, 30)),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(10),
+                Margin = new Thickness(0, 6, 0, 0),
+                Opacity = 0
+            };
+
+            var tb = new TextBlock { Text = text, Foreground = System.Windows.Media.Brushes.White };
+            border.Child = tb;
+            NotificationsPanel.Children.Insert(0, border);
+
+            // Появление
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250));
+            border.BeginAnimation(OpacityProperty, fadeIn);
+
+            // Удаление через таймер
+            var timer = new System.Timers.Timer(seconds * 1000);
+            timer.Elapsed += (s, e) =>
+            {
+                timer.Stop();
+                Dispatcher.Invoke(() =>
+                {
+                    var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(300));
+                    fadeOut.Completed += (s2, e2) => NotificationsPanel.Children.Remove(border);
+                    border.BeginAnimation(OpacityProperty, fadeOut);
+                });
+            };
+            timer.Start();
         }
+
+        // Начать ресайз через Win32
+        private void BeginResize(IntPtr edge)
+        {
+            try
+            {
+                ReleaseCapture();
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                SendMessage(hwnd, WM_NCLBUTTONDOWN, edge, IntPtr.Zero);
+            }
+            catch (Exception)
+            {
+                // можно логировать ошибку, если нужно
+            }
+        }
+
+        private void ToggleMaxRestore()
+        {
+            WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
+        }
+
+
+
 
         #endregion
 
-        private void CopyMessage_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
 
-            if (e.Parameter is string text)
-                Clipboard.SetText(text);
 
-        }
 
-        private void BtnMode_Click(object sender, RoutedEventArgs e)
-        {
-            var win = new ModeWindow
-            {
-                Owner = this,
-                CurrentPrompt = CurrentSystemPrompt,
-                CurrentModeName = CurrentModeName
-            };
 
-            // ShowDialog — блокирует MainWindow пока открыто ModeWindow
-            if (win.ShowDialog() == true)
-            {
-                CurrentSystemPrompt = win.ResultPrompt ?? CurrentSystemPrompt;
-                CurrentModeName = win.ResultModeName ?? CurrentModeName;
 
-                ShowNotification($"🎭 Режим: {CurrentModeName}", 3);
-            }
-        }
+
+
+
+
     }
+
 }

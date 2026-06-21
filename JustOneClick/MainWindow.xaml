@@ -84,6 +84,7 @@
                       Grid.Column="2"
                       VerticalAlignment="Center"
                       ItemsSource="{Binding ModelFiles}"
+                                 
                       SelectedItem="{Binding SelectedModel}"
                       DisplayMemberPath="DisplayName"
                       ToolTip="{Binding SelectedModel.FullPath}"
@@ -122,6 +123,64 @@
                     <!-- Основная область (чат) -->
                     <!-- Основная область (чат) -->
                     <Grid Margin="1,84,1,84">
+
+                        <Border x:Name="SearchPanel"
+            Visibility="Collapsed"
+            VerticalAlignment="Top"
+            Background="#CC111217"
+            CornerRadius="8"
+            Padding="8,6"
+            Margin="8,4,8,0"
+            Panel.ZIndex="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Поле ввода поиска -->
+                                <Border Grid.Column="0" CornerRadius="6"
+                                        BorderThickness="1" Padding="6,4">
+                                    <Border.BorderBrush>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#FF00E5FF" Offset="0"/>
+                                            <GradientStop Color="#FF8A00FF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.BorderBrush>
+                                    <TextBox x:Name="SearchBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Foreground="White"
+                         CaretBrush="White"
+                         FontSize="13"
+                         TextChanged="SearchBox_TextChanged"/>
+                                </Border>
+
+                                <!-- Счётчик результатов -->
+                                <TextBlock x:Name="SearchCounter"
+                       Grid.Column="1"
+                       Foreground="#88FFFFFF"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       Margin="8,0"/>
+
+                                <!-- Кнопки вверх/вниз -->
+                                <Button Grid.Column="2" Width="28" Height="28"
+                    Margin="2,0" Content="▲"
+                    Foreground="White" FontSize="11"
+                    Style="{StaticResource TitleBarButtonStyle}"
+                    Click="SearchPrev_Click"/>
+
+                                <Button Grid.Column="3" Width="28" Height="28"
+                    Margin="2,0" Content="▼"
+                    Foreground="White" FontSize="11"
+                    Style="{StaticResource TitleBarButtonStyle}"
+                    Click="SearchNext_Click"/>
+                            </Grid>
+                        </Border>
+
                         <!-- Скролл для сообщений -->
                         <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                             <!-- ItemsControl привязан к коллекции Messages в DataContext -->
@@ -281,12 +340,26 @@
                         </Border>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <!-- Поиск — НОВАЯ КНОПКА -->
+                            <Button Width="44" Height="44" Margin="4"
+                                    ToolTip="Поиск по чату (Ctrl+F)"
+                                    Click="BtnSearch_Click">
+                                <TextBlock Text="🔍" FontSize="18"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Button>
                             <!-- Режим ИИ — НОВАЯ КНОПКА -->
                             <Button Width="44" Height="44" Margin="4" ToolTip="{Binding CurrentModeName}" Click="BtnMode_Click">
                                 <TextBlock Text="🎭" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Width="44" Height="44" Margin="4" ToolTip="Отправить" Click="Send_Click">➤</Button>
-                            <Button Width="44" Height="44" Margin="4" ToolTip="Прикрепить">📎</Button>
+                            <Button x:Name="BtnAttach"
+                                    Width="44" 
+                                    Height="44" 
+                                    Margin="4" 
+                                    IsEnabled="False" 
+                                    ToolTip="Прикрепить"       
+                                    >📎</Button>
                         </StackPanel>
                     </Grid>
 

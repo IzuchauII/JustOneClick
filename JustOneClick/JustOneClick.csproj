@@ -9,13 +9,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="resource\attach.png" />
     <None Remove="resource\Logo.png" />
     <None Remove="resource\Logo_Ico.ico" />
+    <None Remove="resource\mode.png" />
+    <None Remove="resource\send.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="resource\attach.png" />
     <Resource Include="resource\Logo.png" />
     <Resource Include="resource\Logo_Ico.ico" />
+    <Resource Include="resource\mode.png" />
+    <Resource Include="resource\send.png" />
   </ItemGroup>
 
 </Project>
