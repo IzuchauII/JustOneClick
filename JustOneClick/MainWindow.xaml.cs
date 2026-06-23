@@ -1,6 +1,8 @@
 ﻿#region Область using
 using LLama;
 using LLama.Common;
+using LLama.Exceptions;
+using LLama.Native;
 using LLama.Sampling;
 using Microsoft.Extensions.AI;
 using Microsoft.Win32;
@@ -35,7 +37,10 @@ namespace JustOneClick
 
         // Список найденных GGUF файлов — привязан к ComboBox
         public ObservableCollection<GgufModel> ModelFiles { get; } = [];
-            
+
+        private MtmdWeights? _mtmdWeights;  // clip/mmproj модель
+        private string? _pendingImagePath; // путь к картинке для следующего сообщения
+
 
         // Выбранная модель в ComboBox
         private GgufModel? _selectedModel;
@@ -313,7 +318,7 @@ namespace JustOneClick
                 // Это быстро, занимает доли секунды
                 var mp = new ModelParams(SelectedModel!.FullPath)
                 {
-                    ContextSize = 8192,
+                    ContextSize = 16384,
                     FlashAttention = true,
                     GpuLayerCount = 32,
                     BatchSize = 512,
@@ -416,21 +421,35 @@ namespace JustOneClick
                 {
                     var mp = new ModelParams(modelPath)
                     {
-                        ContextSize = 8192,
+                        ContextSize = 16384,
                         FlashAttention = true,
                         GpuLayerCount = 32,     // 0 = CPU. Для GPU поставь 35+                                            
                         BatchSize = 512,
                     };
 
                     _llamaWeights = LLamaWeights.LoadFromFile(mp);
+                    
                     _llamaContext = _llamaWeights.CreateContext(mp);
+
+                    // Если есть mmproj — загружаем его тоже
+                    if (SelectedModel?.MmprojPath != null)
+                    {
+                        _mtmdWeights = MtmdWeights.LoadFromFile(
+                            SelectedModel.MmprojPath,  // путь к mmproj файлу
+                            _llamaWeights!,             // уже загруженные веса текстовой модели
+                            new MtmdContextParams()    // параметры контекста (можно оставить по умолчанию)
+                        );
+                    }
+
                 });
 
                 // Завершаем прогресс до 100%
                 await AnimateProgressBar(90, 100, durationMs: 300);
 
                 // Создаём сессию чата
-                var executor = new InteractiveExecutor(_llamaContext!);
+                var executor = _mtmdWeights != null
+                ? new InteractiveExecutor(_llamaContext!, _mtmdWeights)
+                : new InteractiveExecutor(_llamaContext!);
                 _chatSession = new ChatSession(executor);
                 _chatSession.OutputTransform = new LLamaTransforms.KeywordTextOutputStreamTransform(
                                                 keywords: new[] { "<think>", "</think>" },
@@ -464,6 +483,12 @@ namespace JustOneClick
 
             _llamaWeights?.Dispose();
             _llamaWeights = null;
+
+            // Выгружаем mmproj
+            _mtmdWeights?.Dispose();
+            _mtmdWeights = null;
+
+            _pendingImagePath = null;
         }
 
 
@@ -504,28 +529,80 @@ namespace JustOneClick
 
         private async Task SendUserMessageAsync()
         {
-            var userText = InputBox?.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(userText)) return;
+            var userText = InputBox?.Text?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(userText) && _pendingImagePath == null) return;
 
-            // Модель должна быть загружена
             if (!_modelReady || _chatSession == null)
             {
                 ShowNotification("⚠️ Выбери модель и дождись загрузки", 3);
                 return;
             }
 
-            // Не отправляем пока идёт генерация
             if (_generating) return;
 
-            // Добавляем сообщение пользователя в чат
-            Messages.Add(new ChatMessage { Text = userText, IsUser = true });
-            InputBox!.Clear();
+            string messageToSend;
+            string displayText;
+
+            if (_pendingImagePath != null && _mtmdWeights != null)
+            {
+                var imagePath = _pendingImagePath;
+                var filename = Path.GetFileName(imagePath);
+                _pendingImagePath = null;
+                var mediaMarker = NativeApi.MtmdDefaultMarker() ?? "<__media__>";
+                _mtmdWeights.ClearMedia();
+                // Обход проблемы с кириллицей/пробелами в пути для native API
+                byte[] imageBytes;
+                try
+                {
+                    imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
+                }
+                catch (Exception ex)
+                {
+                    ShowNotification($"❌ Не удалось прочитать файл:\n{ex.Message}", 5);
+                    return;
+                }
+                SafeMtmdEmbed embed;
+                try
+                {
+                    embed = _mtmdWeights.LoadMedia(imageBytes)
+                        ?? throw new RuntimeError($"Failed to load media '{imagePath}'.");
+                }
+                catch (RuntimeError ex)
+                {
+                    ShowNotification($"❌ {ex.Message}", 5);
+                    return;
+                }
+                // Embeds executor'а НЕ трогаем — маркер уже в тексте,
+                // LoadMedia положил embed в очередь MtmdWeights для Tokenize
+                messageToSend = string.IsNullOrWhiteSpace(userText)
+                    ? mediaMarker
+                    : $"{mediaMarker}\n{userText}";
+                displayText = string.IsNullOrWhiteSpace(userText)
+                    ? $"🖼 {filename}"
+                    : $"🖼 {filename}\n{userText}";
+            }
+            else
+            {
+                messageToSend = userText;
+                displayText = userText;
+            }
+
+            Messages.Add(new ChatMessage { Text = displayText, IsUser = true });
+            InputBox?.Clear();
             ScrollChatToBottom();
 
-            // Создаём пустой пузырь бота — будем заполнять по токенам
             var botBubble = new ChatMessage { Text = "", IsUser = false };
             Messages.Add(botBubble);
             ScrollChatToBottom();
+
+            bool hadImage = messageToSend.Contains(
+            NativeApi.MtmdDefaultMarker() ?? "<__media__>",
+            StringComparison.Ordinal);
+            if (hadImage)
+            {
+                Dispatcher.Invoke(() => botBubble.Text = "⏳ Обрабатываю изображение...");
+                ScrollChatToBottom();
+            }
 
             _generating = true;
             _generationCts = new CancellationTokenSource();
@@ -534,19 +611,12 @@ namespace JustOneClick
             {
                 var buffer = new StringBuilder();
 
-                var inferParams = BuildInferenceParams();
-
-                // Потоковая генерация — токены приходят один за другим
                 await foreach (var token in _chatSession.ChatAsync(
-                    new ChatHistory.Message(AuthorRole.User, userText),
-                    inferParams,
+                    new ChatHistory.Message(AuthorRole.User, messageToSend),
+                    BuildInferenceParams(),
                     _generationCts.Token))
                 {
                     buffer.Append(token);
-
-                    // Обновляем текст пузыря в реальном времени
-                    // ChatMessage реализует INotifyPropertyChanged —
-                    // UI сам перерисует TextBlock без Remove/Insert
                     var snapshot = buffer.ToString();
                     Dispatcher.Invoke(() => botBubble.Text = snapshot);
                     ScrollChatToBottom();
@@ -554,12 +624,11 @@ namespace JustOneClick
             }
             catch (OperationCanceledException)
             {
-                // Генерация отменена — нормально, не показываем ошибку
+                // Отменено — нормально
             }
             catch (Exception ex)
             {
-                Dispatcher.Invoke(() =>
-                    botBubble.Text = $"[Ошибка: {ex.Message}]");
+                Dispatcher.Invoke(() => botBubble.Text = $"[Ошибка: {ex.Message}]");
             }
             finally
             {
@@ -717,6 +786,22 @@ namespace JustOneClick
             await LoadModelAsync(SelectedModel.FullPath);
         }
 
+        private void BtnAttach_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Выбери изображение",
+                Filter = "Изображения|*.jpg;*.jpeg;*.png;*.bmp;*.webp"
+            };
+
+            if (dialog.ShowDialog() != true) return;
+
+            _pendingImagePath = dialog.FileName;
+
+            // Показываем превью в поле ввода
+            var filename = Path.GetFileName(_pendingImagePath);
+            ShowNotification($"🖼 Прикреплено: {filename}", 3);
+        }
     }
 
 }

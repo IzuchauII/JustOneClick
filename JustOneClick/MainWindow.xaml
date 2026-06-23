@@ -386,7 +386,8 @@
                             <Button Width="44" Height="44" Margin="4" ToolTip="Отправить" Click="Send_Click">➤</Button>
                             <Button x:Name="BtnAttach"
                                     Width="44" 
-                                    Height="44" 
+                                    Height="44"
+                                    Click="BtnAttach_Click"
                                     Margin="4" 
                                     IsEnabled="False" 
                                     ToolTip="Прикрепить"       
