@@ -9,6 +9,8 @@ using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -309,6 +311,13 @@ namespace JustOneClick
 
             if (_llamaWeights != null)
             {
+                // Очищаем ожидающее изображение при смене режима
+                if (_pendingImagePath != null)
+                {
+                    _pendingImagePath = null;
+                    ShowNotification("⚠️ Прикреплённое изображение отменено при смене режима", 2);
+                }
+
                 // Уничтожаем старый контекст (он содержит всю историю токенов)
                 _chatSession = null;
                 _llamaContext?.Dispose();
@@ -327,13 +336,17 @@ namespace JustOneClick
                 _llamaContext = _llamaWeights.CreateContext(mp);
 
                 // Теперь контекст чистый — AddAndProcessSystemMessage не упадёт
-                var executor = new InteractiveExecutor(_llamaContext);
+                // Важно: если есть mmproj, создаём executor с мультимодальностью!
+                var executor = _mtmdWeights != null
+                    ? new InteractiveExecutor(_llamaContext, _mtmdWeights)
+                    : new InteractiveExecutor(_llamaContext);
+
                 _chatSession = new ChatSession(executor);
 
                 _chatSession.OutputTransform = new LLamaTransforms.KeywordTextOutputStreamTransform(
                     keywords: new[] { "<think>", "</think>" },
                     redundancyLength: 8
-                    );
+                );
 
                 _chatSession.AddAndProcessSystemMessage(ActiveSystemPrompt);
 
@@ -551,14 +564,23 @@ namespace JustOneClick
                 var mediaMarker = NativeApi.MtmdDefaultMarker() ?? "<__media__>";
                 _mtmdWeights.ClearMedia();
                 // Обход проблемы с кириллицей/пробелами в пути для native API
-                byte[] imageBytes;
+                // Сжимаем изображение перед загрузкой
+                byte[]? imageBytes;
                 try
                 {
-                    imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
+                    imageBytes = await CompressImageAsync(imagePath, maxWidth: 512, jpegQuality: 85);
+                    if (imageBytes == null || imageBytes.Length == 0)
+                    {
+                        ShowNotification($"❌ Не удалось обработать изображение", 5);
+                        return;
+                    }
+
+                    // Логируем размер для отладки
+                    ShowNotification($"🖼 Подготовлено: {(imageBytes.Length / 1024f):F1} KB", 2);
                 }
                 catch (Exception ex)
                 {
-                    ShowNotification($"❌ Не удалось прочитать файл:\n{ex.Message}", 5);
+                    ShowNotification($"❌ Ошибка обработки:\n{ex.Message}", 5);
                     return;
                 }
                 SafeMtmdEmbed embed;
@@ -802,6 +824,98 @@ namespace JustOneClick
             var filename = Path.GetFileName(_pendingImagePath);
             ShowNotification($"🖼 Прикреплено: {filename}", 3);
         }
+
+        private void StopGenerationToken(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Проверяем, идёт ли генерация
+                if (_generationCts != null && !_generationCts.IsCancellationRequested)
+                {
+                    _generationCts.Cancel(); // Останавливаем генерацию
+                    ShowNotification("⏹ Генерация остановлена", 3);
+                }
+                else
+                {
+                    ShowNotification("⚠️ Генерация уже завершена", 3);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowNotification($"Ошибка при остановке: {ex.Message}", 3);
+            }
+        }
+
+            //maxWidth: 512, jpegQuality: 80 — максимум производительность(может потеряться деталь)
+            //maxWidth: 768, jpegQuality: 85 — баланс(рекомендую стартовать с этого)
+            //maxWidth: 1024, jpegQuality: 90 — максимум качество(но медленнее)
+        private async Task<byte[]?> CompressImageAsync(string imagePath,
+    int maxWidth = 768, int maxHeight = 768, int jpegQuality = 85)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    using (var originalImage = System.Drawing.Image.FromFile(imagePath))
+                    {
+                        double scale = Math.Min(
+                            (double)maxWidth / originalImage.Width,
+                            (double)maxHeight / originalImage.Height
+                        );
+
+                        if (scale >= 1.0)
+                        {
+                            return SaveAsJpeg(originalImage, jpegQuality);
+                        }
+
+                        int newWidth = (int)(originalImage.Width * scale);
+                        int newHeight = (int)(originalImage.Height * scale);
+
+                        using (var resized = new System.Drawing.Bitmap(newWidth, newHeight))
+                        {
+                            resized.SetResolution(originalImage.HorizontalResolution,
+                                                 originalImage.VerticalResolution);
+
+                            using (var g = System.Drawing.Graphics.FromImage(resized))
+                            {
+                                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+                                g.DrawImage(originalImage, 0, 0, newWidth, newHeight);
+                            }
+
+                            return SaveAsJpeg(resized, jpegQuality);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowNotification($"❌ Ошибка обработки изображения:\n{ex.Message}", 5);
+                    return null;  // ← Теперь OK (nullable return type)
+                }
+            });
+        }
+
+        private byte[] SaveAsJpeg(System.Drawing.Image image, int quality)
+        {
+            using (var ms = new MemoryStream())
+            {
+                var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+                    .First(c => c.MimeType == "image/jpeg");
+
+                var encParams = new System.Drawing.Imaging.EncoderParameters(1);
+                encParams.Param[0] = new System.Drawing.Imaging.EncoderParameter(
+                    System.Drawing.Imaging.Encoder.Quality, (long)quality);
+
+                image.Save(ms, encoder, encParams);
+                return ms.ToArray();
+            }
+        }
+
+
+
     }
+
 
 }

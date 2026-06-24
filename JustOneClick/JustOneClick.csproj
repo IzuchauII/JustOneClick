@@ -11,9 +11,17 @@
 
   <ItemGroup>
     <None Remove="resource\attach.png" />
+    <None Remove="resource\attachnow.png" />
+    <None Remove="resource\closebutton.png" />
+    <None Remove="resource\foldder.png" />
+    <None Remove="resource\fullwin.png" />
     <None Remove="resource\Logo.png" />
+    <None Remove="resource\LogoNow.png" />
     <None Remove="resource\Logo_Ico.ico" />
+    <None Remove="resource\loop.png" />
+    <None Remove="resource\minbutton.png" />
     <None Remove="resource\mode.png" />
+    <None Remove="resource\pause.png" />
     <None Remove="resource\send.png" />
   </ItemGroup>
 
@@ -24,9 +32,17 @@
 
   <ItemGroup>
     <Resource Include="resource\attach.png" />
+    <Resource Include="resource\attachnow.png" />
+    <Resource Include="resource\closebutton.png" />
+    <Resource Include="resource\foldder.png" />
+    <Resource Include="resource\fullwin.png" />
     <Resource Include="resource\Logo.png" />
+    <Resource Include="resource\LogoNow.png" />
     <Resource Include="resource\Logo_Ico.ico" />
+    <Resource Include="resource\loop.png" />
+    <Resource Include="resource\minbutton.png" />
     <Resource Include="resource\mode.png" />
+    <Resource Include="resource\pause.png" />
     <Resource Include="resource\send.png" />
   </ItemGroup>
 

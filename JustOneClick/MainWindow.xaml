@@ -21,26 +21,13 @@
                         Executed="CopyMessage_Executed"/>
     </Window.CommandBindings>
 
-    <!-- Внешняя неоновая рамка -->
-    <!-- Стало — убираем ручной BorderBrush, применяем стиль -->
-    <Border Padding="4"
-            Style="{StaticResource NeonAnimatedBorderStyle}">
-
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="18"
-                              ShadowDepth="0"
-                              Opacity="0.7"/>
-        </Border.Effect>
+    <!-- Внешняя рамка -->
+    <Border Padding="0" BorderThickness="1" Background="Transparent">
 
         <!-- Основной фон окна -->
         <Grid Background="{StaticResource WindowBackgroundBrush}" ClipToBounds="True">
             <!-- Внутренний бордер с тенью -->
             <Border Background="{StaticResource InnerPanelBrush}">
-
-                <Border.Effect>
-                    <DropShadowEffect Color="#000000" BlurRadius="30" ShadowDepth="0" Opacity="0.45"/>
-                </Border.Effect>
-
                 <Grid>
                     <!-- Header -->
                     <Grid Height="48" VerticalAlignment="Top" Margin="8">
@@ -59,63 +46,75 @@
 
                         <!-- Логотип и название -->
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" Margin="8,0">
-                            <Image Source="{StaticResource AppLogo}" Width="28" Height="28"/>
-                            <TextBlock Text=" JustOneClick" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="1,0"/>
+                            <Image Source="/resource/LogoNow.png" Width="28" Height="28"/>
+                            <TextBlock Text=" JustOneClick" Foreground="{StaticResource TextBrush}" FontWeight="UltraLight" VerticalAlignment="Center" Margin="1,0"/>
                         </StackPanel>
 
                         <!-- Кнопка выбора папки -->
-                        <Button Grid.Column="1" Width="28" Height="28" Margin="8,0,4,0"
+                        <Button Grid.Column="1"
+                            Width="28" Height="28"
+                            Margin="8,0,4,0"
                             ToolTip="Выбрать папку с моделями"
                             Click="BtnSelectFolder_Click"
                             Style="{StaticResource TitleBarButtonStyle}">
-                            <TextBlock Text="📁" FontSize="14" VerticalAlignment="Center"
-                            HorizontalAlignment="Center">
-                                <TextBlock.Foreground>
-                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                                        <GradientStop Color="#FFCC8C8C"/>
-                                        <GradientStop Color="#FFD41B1B" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </TextBlock.Foreground>
-                            </TextBlock>
+                            <Image Source="/resource/foldder.png"
+                            Width="20" Height="20"
+                            Stretch="Uniform"/>
                         </Button>
 
                         <!-- Выпадающий список моделей -->
                         <ComboBox x:Name="ModelComboBox"
                       Grid.Column="2"
                       VerticalAlignment="Center"
-                      ItemsSource="{Binding ModelFiles}"
-                                 
+                      ItemsSource="{Binding ModelFiles}"                                 
                       SelectedItem="{Binding SelectedModel}"
                       DisplayMemberPath="DisplayName"
                       ToolTip="{Binding SelectedModel.FullPath}"
+                      BorderBrush="#FFAFFFF7"
                       Foreground="Black"
-                      BorderThickness="0.4"
-                      
+                      BorderThickness="1.4"                      
                       Height="29"
-                      SelectionChanged="ModelComboBox_SelectionChanged" Background="#00000000">
-                            <ComboBox.BorderBrush>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="{StaticResource NeonStart}" Offset="0"/>
-                                    <GradientStop Color="{StaticResource NeonEnd}" Offset="1"/>
-                                </LinearGradientBrush>
-                            </ComboBox.BorderBrush>
-                        </ComboBox>
+                      SelectionChanged="ModelComboBox_SelectionChanged" Background="#FFFBFFFF"/>
 
                         <!-- Пустая область для перетаскивания -->
                         <Border Grid.Column="3" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown"/>
 
                         <!-- Кнопки -->
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,1,0">
-                            <Button x:Name="BtnMin" Click="BtnMin_Click" Width="24" Height="24" Margin="4,0" ToolTip="Свернуть" Style="{StaticResource TitleBarButtonStyle}">
-                                <Path Data="M0,11 L12,5" Stroke="White" StrokeThickness="2" Stretch="Uniform"/>
+                            
+                            <Button x:Name="BtnMin"
+                                    Click="BtnMin_Click"
+                                    Width="28" Height="28"
+                                    Margin="4,0"
+                                    ToolTip="Свернуть"
+                                    Background="Transparent"
+                                    BorderThickness="0">
+                                <Image Source="/resource/minbutton.png"
+                                       Width="20" Height="20"
+                                       Stretch="Uniform"/>
                             </Button>
 
-                            <Button x:Name="BtnMax" Click="BtnMax_Click" Width="24" Height="24" Margin="4,0" ToolTip="Развернуть" Style="{StaticResource TitleBarButtonStyle}">
-                                <Path Data="M1,3 L11,1 L11,11 L1,11 Z" Stroke="White" StrokeThickness="1.5" Stretch="Uniform"/>
+                            <Button x:Name="BtnMax" 
+                                    Click="BtnMax_Click" 
+                                    Width="28" Height="28" 
+                                    Margin="4,0" 
+                                    ToolTip="Развернуть"                                     
+                                    Background="Transparent"
+                                    BorderThickness="0">
+                                <Image Source="/resource/fullwin.png"
+                                       Width="20" Height="20"
+                                       Stretch="Uniform"/>
                             </Button>
 
-                            <Button x:Name="BtnClose" Click="BtnClose_Click" Width="24" Height="24" Margin="4,0" ToolTip="Закрыть" Style="{StaticResource CloseButtonStyle}">
-                                <Path Data="M1,1 L11,11 M11,1 L1,11" Stroke="Red" StrokeThickness="2.8" Stretch="Uniform"/>
+                            <Button x:Name="BtnClose" 
+                                    Click="BtnClose_Click" 
+                                    Width="28" Height="28" Margin="4,0" 
+                                    ToolTip="Закрыть" 
+                                    Background="Transparent"
+                                    BorderThickness="0">
+                                <Image Source="/resource/closebutton.png"
+                                       Width="20" Height="20"
+                                       Stretch="Uniform"/>
                             </Button>
                         </StackPanel>
                     </Grid>
@@ -125,13 +124,13 @@
                     <Grid Margin="1,84,1,84">
 
                         <Border x:Name="SearchPanel"
-            Visibility="Collapsed"
-            VerticalAlignment="Top"
-            Background="#CC111217"
-            CornerRadius="8"
-            Padding="8,6"
-            Margin="8,4,8,0"
-            Panel.ZIndex="10">
+                                Visibility="Collapsed"
+                                VerticalAlignment="Top"
+                                Background="#CC111217"
+                                CornerRadius="8"
+                                Padding="8,6"
+                                Margin="8,4,8,0"
+                                Panel.ZIndex="10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -145,52 +144,52 @@
                                         BorderThickness="1" Padding="6,4">
                                     <Border.BorderBrush>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#FF00E5FF" Offset="0"/>
-                                            <GradientStop Color="#FF8A00FF" Offset="1"/>
+                                            <GradientStop Color="#d7fffb" Offset="0"/>
+                                            <GradientStop Color="White" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Border.BorderBrush>
                                     <TextBox x:Name="SearchBox"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Foreground="White"
-                         CaretBrush="White"
-                         FontSize="13"
-                         TextChanged="SearchBox_TextChanged"/>
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             Foreground="White"
+                                             CaretBrush="White"
+                                             FontSize="13"
+                                             TextChanged="SearchBox_TextChanged"/>
                                 </Border>
 
                                 <!-- Счётчик результатов -->
                                 <TextBlock x:Name="SearchCounter"
-                       Grid.Column="1"
-                       Foreground="#88FFFFFF"
-                       FontSize="12"
-                       VerticalAlignment="Center"
-                       Margin="8,0"/>
+                                           Grid.Column="1"
+                                           Foreground="#88FFFFFF"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0"/>
 
                                 <!-- Кнопки вверх/вниз -->
                                 <Button Grid.Column="2" Width="28" Height="28"
-                    Margin="2,0" Content="▲"
-                    Foreground="White" FontSize="11"
-                    Style="{StaticResource TitleBarButtonStyle}"
-                    Click="SearchPrev_Click"/>
+                                        Margin="2,0" Content="▲"
+                                        Foreground="White" FontSize="11"
+                                        Style="{StaticResource TitleBarButtonStyle}"
+                                        Click="SearchPrev_Click"/>  
 
                                 <Button Grid.Column="3" Width="28" Height="28"
-                    Margin="2,0" Content="▼"
-                    Foreground="White" FontSize="11"
-                    Style="{StaticResource TitleBarButtonStyle}"
-                    Click="SearchNext_Click"/>
+                                        Margin="2,0" Content="▼"
+                                        Foreground="White" FontSize="11"
+                                        Style="{StaticResource TitleBarButtonStyle}"
+                                        Click="SearchNext_Click"/>
                             </Grid>
                         </Border>
 
                         <Border x:Name="LoadingBar"
                                         VerticalAlignment="Top"
                                         Margin="8,56,8,0"
-                                        Visibility="Collapsed"
+                                        Visibility="Visible"
                                         CornerRadius="4"
                                         Height="6">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#FF00E5FF" Offset="0"/>
-                                    <GradientStop Color="#FF8A00FF" Offset="1"/>
+                                    <GradientStop Color="WhiteSmoke" Offset="0"/>
+                                    <GradientStop Color="Aquamarine" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
 
@@ -208,7 +207,7 @@
                                    VerticalAlignment="Top"
                                    HorizontalAlignment="Center"
                                    Margin="0,64,0,0"
-                                   Foreground="#88FFFFFF"
+                                   Foreground="#CC0F0F10"
                                    FontSize="11"
                                    Visibility="Collapsed"/>
 
@@ -353,17 +352,17 @@
                                 CornerRadius="14"
                                 Padding="8.5"
                                 BorderThickness="2"
-                                BorderBrush="LightBlue">
+                                BorderBrush="DodgerBlue">
                             <Border.Effect>
-                                <DropShadowEffect BlurRadius="10"
-                                                  ShadowDepth="0"
+                                <DropShadowEffect BlurRadius="5"
+                                                  ShadowDepth="2"
                                                   Color="LightBlue"/>
                             </Border.Effect>
 
                             <TextBox x:Name="InputBox" 
                                      Background="Transparent" 
                                      BorderThickness="0" 
-                                     Foreground="White" 
+                                     Foreground="Black" 
                                      PreviewKeyDown="InputBox_PreviewKeyDown" 
                                      AcceptsReturn="True"
                                      Padding="0"
@@ -371,27 +370,69 @@
                         </Border>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+
+                            <Button x:Name="StopGenerating"
+                                    Width="44" 
+                                    Height="44"
+                                    Click="StopGenerationToken"
+                                    BorderThickness="0"
+                                    Background="Transparent"
+                                    Margin="4" 
+                                    IsEnabled="True" 
+                                    ToolTip="Остановить генерацию ИИ">
+                                <Image Source="/resource/pause.png"
+                                       Width="24" Height="24"
+                                       Stretch="Uniform"/>
+                            </Button>
+
                             <!-- Поиск — НОВАЯ КНОПКА -->
                             <Button Width="44" Height="44" Margin="4"
-                                    ToolTip="Поиск по чату (Ctrl+F)"
+                                    ToolTip="Поиск по чату (Ctrl+F)"     
+                                    Background="Transparent"
+                                    BorderThickness="0"
                                     Click="BtnSearch_Click">
-                                <TextBlock Text="🔍" FontSize="18"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
+                                <Image Source="/resource/loop.png"
+                                       Width="44" Height="44"
+                                       Stretch="Uniform"/>
                             </Button>
                             <!-- Режим ИИ — НОВАЯ КНОПКА -->
-                            <Button Width="44" Height="44" Margin="4" ToolTip="{Binding CurrentModeName}" Click="BtnMode_Click">
-                                <TextBlock Text="🎭" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Button Width="44" Height="44" 
+                                    Margin="4" 
+                                    ToolTip="{Binding CurrentModeName}"
+                                    BorderThickness="0"
+                                    Background="Transparent"
+                                    Click="BtnMode_Click">
+                                <Image Source="/resource/mode.png"
+                                       Width="24" Height="24"
+                                       Stretch="Uniform"/>
                             </Button>
-                            <Button Width="44" Height="44" Margin="4" ToolTip="Отправить" Click="Send_Click">➤</Button>
+
+                            <Button Width="44" Height="44" 
+                                    Margin="4" 
+                                    ToolTip="Отправить"
+                                    BorderThickness="0"
+                                    Background="Transparent"
+                                    Click="Send_Click">
+                                <Image Source="/resource/send.png"
+                                       Width="24" Height="24"
+                                       Stretch="Uniform"/>
+                            </Button>
+
                             <Button x:Name="BtnAttach"
                                     Width="44" 
                                     Height="44"
                                     Click="BtnAttach_Click"
+                                    BorderThickness="0"
+                                    Background="Transparent"
                                     Margin="4" 
                                     IsEnabled="False" 
-                                    ToolTip="Прикрепить"       
-                                    >📎</Button>
+                                    ToolTip="Прикрепить">
+                                <Image Source="/resource/attachnow.png"
+                                       Width="24" Height="24"
+                                       Stretch="Uniform"/>
+                            </Button>
+
+
                         </StackPanel>
                     </Grid>
 
